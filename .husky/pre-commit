@@ -1,11 +1,13 @@
+set -e
+
 echo "🖊️  [pre-commit] Lint de qualidade de código..."
 
 if [ -d "frontend" ]; then
-  cd frontend && npm run lint && npm run typecheck && cd ..
+  (cd frontend && npm run lint && npm run typecheck)
 fi
 
 if [ -d "backend" ]; then
-  cd backend && mvn -q -B spotless:check && cd ..
+  (cd backend && mvn -q -B spotless:check)
 fi
 
 echo "✅ [pre-commit] Checks concluídos."
