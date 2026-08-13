@@ -1,0 +1,7 @@
+echo "🧪 [pre-push] Testes unitários + cobertura mínima de 80% (Jacoco, JDK 25 via Docker)..."
+
+if [ -f "./scripts/check-backend.sh" ]; then
+  ./scripts/check-backend.sh verify
+fi
+
+echo "✅ [pre-push] Verificação completa concluída."

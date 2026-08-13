@@ -1,0 +1,51 @@
+# ============================================================
+# SRM Credit Engine — .gitignore
+# ============================================================
+
+# ---- Java / Maven ----
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+dependency-reduced-pom.xml
+
+# ---- Node / Frontend ----
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# ---- IDE ----
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Env & Secrets ----
+.env
+.env.local
+.env.*.local
+
+# ---- Logs ----
+*.log
+logs/
+log/
+
+# ---- Observability data ----
+prometheus-data/
+grafana-data/
+jaeger-data/
+
+# ---- Misc ----
+*.pid
+*.seed
+*.pid.lock
+hs_err_pid*
