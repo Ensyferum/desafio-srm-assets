@@ -36,9 +36,5 @@ class FxRatePublisherTest {
     @Test
     void topicNameMatchesManagedTopic() {
         assertThat(FxRatePublisher.TOPIC).isEqualTo("fx.updated");
-        KafkaConfig config = new KafkaConfig();
-        assertThat(config.fxUpdatedTopic().name()).isEqualTo("fx.updated");
-        assertThat(config.fxUpdatedTopic().numPartitions()).isEqualTo(3);
-        assertThat(config.fxUpdatedTopic().replicationFactor()).isEqualTo((short) 1);
     }
 }

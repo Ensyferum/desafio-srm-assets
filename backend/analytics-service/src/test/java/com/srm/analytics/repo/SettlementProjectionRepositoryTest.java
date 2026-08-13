@@ -1,6 +1,5 @@
 package com.srm.analytics.repo;
 
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -81,25 +80,26 @@ class SettlementProjectionRepositoryTest {
     void updateDailySummaryFallsBackToTodayWhenSettledAtNull() {
         SettlementProjectionRepository repository =
                 new SettlementProjectionRepository(jdbcTemplate);
+        SettlementEvent base = event();
         SettlementEvent event =
                 new SettlementEvent(
-                        event().transactionId(),
-                        event().receivableId(),
-                        event().cedenteId(),
-                        event().faceValue(),
-                        event().presentValue(),
-                        event().discountValue(),
-                        event().currency(),
-                        event().settlementCurrency(),
-                        event().exchangeRateApplied(),
+                        base.transactionId(),
+                        base.receivableId(),
+                        base.cedenteId(),
+                        base.faceValue(),
+                        base.presentValue(),
+                        base.discountValue(),
+                        base.currency(),
+                        base.settlementCurrency(),
+                        base.exchangeRateApplied(),
                         null,
-                        event().status());
+                        base.status());
 
         repository.updateDailySummary(event);
 
         verify(jdbcTemplate)
                 .update(
-                        any(),
+                        anyString(),
                         eq(LocalDate.now()),
                         eq(event.settlementCurrency()),
                         eq(event.presentValue()),
