@@ -17,7 +17,11 @@ class MetricsAutoConfigurationTest {
         Counter counter = Counter.builder("srm.test.metric").register(registry);
         counter.increment();
 
-        assertThat(registry.get("srm.test.metric").tag("application").value())
-                .isEqualTo("currency-service");
+        assertThat(
+                        registry.get("srm.test.metric")
+                                .tag("application", "currency-service")
+                                .counter()
+                                .count())
+                .isEqualTo(1.0);
     }
 }

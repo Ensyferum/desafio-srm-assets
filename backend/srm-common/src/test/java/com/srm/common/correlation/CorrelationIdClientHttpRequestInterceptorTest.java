@@ -58,6 +58,6 @@ class CorrelationIdClientHttpRequestInterceptorTest {
                 new byte[0],
                 (req, body) -> new MockClientHttpResponse(new byte[0], HttpStatus.OK));
 
-        assertThat(request.getHeaders().containsKey(CorrelationIds.HEADER)).isFalse();
+        assertThat(request.getHeaders().getFirst(CorrelationIds.HEADER)).isNull();
     }
 }
