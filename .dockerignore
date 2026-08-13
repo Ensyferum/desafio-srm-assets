@@ -1,0 +1,35 @@
+# ============================================================
+# SRM Credit Engine — .dockerignore
+# ============================================================
+
+# ---- Git / CI / tooling ----
+.git
+.github
+.husky
+.idea
+.vscode
+
+# ---- Node / Frontend ----
+node_modules
+frontend
+dist
+dist-ssr
+
+# ---- Java / Maven build artifacts ----
+**/target
+**/*.class
+**/*.jar
+.mvn
+
+# ---- Env & secrets ----
+.env
+.env.*
+*.pem
+*.key
+
+# ---- Docs & dados locais ----
+*.md
+*.log
+prometheus-data
+grafana-data
+jaeger-data

@@ -1,0 +1,272 @@
+# ============================================================
+# SRM Credit Engine — Docker Compose (sistema inteiro)
+#
+# Uso:
+#   cp .env.example .env            # ajuste as credenciais
+#   docker compose up -d --build    # sobe infra + todos os serviços
+#   docker compose ps               # acompanhe os healthchecks
+#   docker compose logs -f gateway-service
+#
+# Observabilidade (opcional):
+#   docker compose --profile observability up -d --build
+#   Jaeger    http://localhost:16686
+#   Prometheus http://localhost:9090
+#   Grafana   http://localhost:3000 (admin / GRAFANA_ADMIN_PASSWORD)
+#
+# Portas:
+#   gateway-service  8080 (entrada pública da API)
+#   auth-service     8081 · currency-service 8082 · credit-service 8083 · analytics-service 8084
+#   postgres 5432 · redis 6379 · kafka 9092 (host) / 29092 (interna)
+# ============================================================
+
+name: srm-credit-engine
+
+# ---------- Âncoras de ambiente compartilhado ----------
+# (um único anchor por serviço: merge keys YAML não podem se repetir num mapeamento)
+x-common-env: &common-env
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-srm_credit_engine}
+  SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-srm_user}
+  SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-srm_pass_2026}
+  OTEL_JAVAAGENT_ENABLED: ${OTEL_JAVAAGENT_ENABLED:-false}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: none
+  PORT: 8080
+
+services:
+  # ==========================================================
+  # Infraestrutura
+  # ==========================================================
+  postgres:
+    image: postgres:17-alpine
+    container_name: srm-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-srm_credit_engine}
+      POSTGRES_USER: ${POSTGRES_USER:-srm_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-srm_pass_2026}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-srm_user} -d ${POSTGRES_DB:-srm_credit_engine}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: srm-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.9.0
+    container_name: srm-kafka
+    hostname: kafka
+    environment:
+      # KRaft single-node (sem Zookeeper) — padrão oficial do Confluent
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      KAFKA_LISTENERS: PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # ID do cluster exigido pelo entrypoint do cp-kafka em modo KRaft
+      CLUSTER_ID: srm-assets-kafka-2026
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "cub kafka-ready -b kafka:29092 1 30"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+  # ==========================================================
+  # Observabilidade (perfil opcional)
+  # ==========================================================
+  jaeger:
+    image: jaegertracing/all-in-one:1.66
+    profiles: ["observability"]
+    container_name: srm-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    profiles: ["observability"]
+    container_name: srm-prometheus
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    profiles: ["observability"]
+    container_name: srm-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_started
+    restart: unless-stopped
+
+  # ==========================================================
+  # Microserviços
+  # ==========================================================
+  auth-service:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: auth-service
+    container_name: srm-auth
+    environment:
+      <<: *common-env
+      JWT_SECRET: ${JWT_SECRET:-c2VjdXJlLWRldi1zZWNyZXQtY2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tMjAyNi1zcm0tc3Jt}
+      JWT_ISSUER: ${JWT_ISSUER:-https://srm-credit-engine}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-480}
+      SEED_ADMIN_USERNAME: ${SEED_ADMIN_USERNAME:-admin}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-Admin@123}
+      SEED_MANAGER_USERNAME: ${SEED_MANAGER_USERNAME:-manager}
+      SEED_MANAGER_PASSWORD: ${SEED_MANAGER_PASSWORD:-Manager@123}
+      SEED_OPERATOR_USERNAME: ${SEED_OPERATOR_USERNAME:-operator}
+      SEED_OPERATOR_PASSWORD: ${SEED_OPERATOR_PASSWORD:-Operator@123}
+      OTEL_SERVICE_NAME: auth-service
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  gateway-service:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: gateway-service
+    container_name: srm-gateway
+    environment:
+      OTEL_JAVAAGENT_ENABLED: ${OTEL_JAVAAGENT_ENABLED:-false}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      PORT: 8080
+      AUTH_SERVICE_URI: http://auth-service:8080
+      CURRENCY_SERVICE_URI: http://currency-service:8080
+      CREDIT_SERVICE_URI: http://credit-service:8080
+      ANALYTICS_SERVICE_URI: http://analytics-service:8080
+      JWT_SECRET: ${JWT_SECRET:-c2VjdXJlLWRldi1zZWNyZXQtY2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tMjAyNi1zcm0tc3Jt}
+      JWT_ISSUER: ${JWT_ISSUER:-https://srm-credit-engine}
+      OTEL_SERVICE_NAME: gateway-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      currency-service:
+        condition: service_healthy
+      credit-service:
+        condition: service_healthy
+      analytics-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  currency-service:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: currency-service
+    container_name: srm-currency
+    environment:
+      <<: *common-env
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      FX_CACHE_TTL_MINUTES: ${FX_CACHE_TTL_MINUTES:-5}
+      OTEL_SERVICE_NAME: currency-service
+    ports:
+      - "8082:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  credit-service:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: credit-service
+    container_name: srm-credit
+    environment:
+      <<: *common-env
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      CURRENCY_SERVICE_URI: http://currency-service:8080
+      FX_MAX_ATTEMPTS: ${FX_MAX_ATTEMPTS:-3}
+      OTEL_SERVICE_NAME: credit-service
+    ports:
+      - "8083:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      currency-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  analytics-service:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: analytics-service
+    container_name: srm-analytics
+    environment:
+      <<: *common-env
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      OTEL_SERVICE_NAME: analytics-service
+    ports:
+      - "8084:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  prometheus-data:
+  grafana-data:

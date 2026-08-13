@@ -10,6 +10,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 M2_CACHE="${M2_CACHE:-$HOME/.m2}"
 
+# No Git Bash/Windows o Docker Desktop exige caminhos no formato C:/... (não /c/...)
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*)
+    ROOT="$(cygpath -w "$ROOT")"
+    M2_CACHE="$(cygpath -w "$M2_CACHE")"
+    ;;
+esac
+
 # MSYS_NO_PATHCONV evita que o Git Bash converta /workspace em caminho Windows
 MSYS_NO_PATHCONV=1 docker run --rm \
   -v "$ROOT:/workspace" \
