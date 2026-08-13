@@ -19,7 +19,7 @@ class JwtServiceTest {
 
     @Test
     void issuesTokenWithExpectedClaims() {
-        JwtService jwtService = new JwtService(SECRET, "srm-credit-engine", 480);
+        JwtService jwtService = new JwtService(SECRET, "https://srm-credit-engine", 480);
         User user = new User("admin", "hash", "Admin", Role.ADMIN);
 
         String token = jwtService.issueToken(user);
@@ -31,7 +31,7 @@ class JwtServiceTest {
         assertThat(decoded.getSubject()).isEqualTo("admin");
         assertThat(decoded.getClaimAsString("roles")).isEqualTo("ADMIN");
         assertThat(decoded.getClaimAsString("fullName")).isEqualTo("Admin");
-        assertThat(decoded.getIssuer()).isEqualTo("srm-credit-engine");
+        assertThat(decoded.getClaimAsString("iss")).isEqualTo("https://srm-credit-engine");
         assertThat(decoded.getExpiresAt()).isAfter(decoded.getIssuedAt());
     }
 

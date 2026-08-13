@@ -2,6 +2,7 @@ package com.srm.gateway.filter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
@@ -16,13 +17,22 @@ class CorrelationIdWebFilterTest {
     void generatesAndPropagatesCorrelationId() {
         MockServerWebExchange exchange =
                 MockServerWebExchange.from(MockServerHttpRequest.get("/api/v1/health"));
+        AtomicReference<String> seenByChain = new AtomicReference<>();
 
-        filter.filter(exchange, e -> Mono.empty()).block();
+        filter.filter(
+                        exchange,
+                        e -> {
+                            seenByChain.set(
+                                    e.getRequest()
+                                            .getHeaders()
+                                            .getFirst(CorrelationIdWebFilter.HEADER));
+                            return Mono.empty();
+                        })
+                .block();
 
-        String header = exchange.getRequest().getHeaders().getFirst(CorrelationIdWebFilter.HEADER);
-        assertThat(header).isNotBlank();
+        assertThat(seenByChain.get()).isNotBlank();
         assertThat(exchange.getResponse().getHeaders().getFirst(CorrelationIdWebFilter.HEADER))
-                .isEqualTo(header);
+                .isEqualTo(seenByChain.get());
     }
 
     @Test
@@ -36,6 +46,30 @@ class CorrelationIdWebFilterTest {
 
         assertThat(exchange.getRequest().getHeaders().getFirst(CorrelationIdWebFilter.HEADER))
                 .isEqualTo("cid-incoming");
+    }
+
+    @Test
+    void sanitizesOversizedIncomingHeader() {
+        MockServerWebExchange exchange =
+                MockServerWebExchange.from(
+                        MockServerHttpRequest.get("/api/v1/health")
+                                .header(CorrelationIdWebFilter.HEADER, "x".repeat(200)));
+        AtomicReference<String> seenByChain = new AtomicReference<>();
+
+        filter.filter(
+                        exchange,
+                        e -> {
+                            seenByChain.set(
+                                    e.getRequest()
+                                            .getHeaders()
+                                            .getFirst(CorrelationIdWebFilter.HEADER));
+                            return Mono.empty();
+                        })
+                .block();
+
+        assertThat(seenByChain.get()).hasSize(64);
+        assertThat(exchange.getResponse().getHeaders().getFirst(CorrelationIdWebFilter.HEADER))
+                .hasSize(64);
     }
 
     @Test

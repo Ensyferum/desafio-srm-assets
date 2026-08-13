@@ -35,7 +35,7 @@ spring:
 app:
   jwt:
     secret: ${JWT_SECRET:c2VjdXJlLWRldi1zZWNyZXQtY2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tMjAyNi1zcm0tc3Jt}
-    issuer: ${JWT_ISSUER:srm-credit-engine}
+    issuer: ${JWT_ISSUER:https://srm-credit-engine}
 
 server:
   port: ${PORT:8080}

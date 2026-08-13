@@ -9,8 +9,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
+import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 
 /**
@@ -20,10 +20,11 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 @Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
-
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(
-            ServerHttpSecurity http, JwtRolesConverter jwtRolesConverter) {
+            ServerHttpSecurity http,
+            JwtRolesConverter jwtRolesConverter,
+            ReactiveJwtDecoder jwtDecoder) {
         http.csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(
                         exchanges ->
@@ -52,14 +53,16 @@ public class SecurityConfig {
                 .oauth2ResourceServer(
                         oauth2 ->
                                 oauth2.jwt(
-                                        jwt -> jwt.jwtAuthenticationConverter(jwtRolesConverter)));
+                                        jwt ->
+                                                jwt.jwtAuthenticationConverter(jwtRolesConverter)
+                                                        .jwtDecoder(jwtDecoder)));
         return http.build();
     }
 
     @Bean
-    public JwtDecoder jwtDecoder(@Value("${app.jwt.secret}") String secret) {
+    public ReactiveJwtDecoder jwtDecoder(@Value("${app.jwt.secret}") String secret) {
         byte[] keyBytes = Base64.getDecoder().decode(secret);
-        return NimbusJwtDecoder.withSecretKey(new SecretKeySpec(keyBytes, "HmacSHA256"))
+        return NimbusReactiveJwtDecoder.withSecretKey(new SecretKeySpec(keyBytes, "HmacSHA256"))
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
     }

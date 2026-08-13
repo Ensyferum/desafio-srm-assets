@@ -27,7 +27,8 @@ public class UserHeadersFilter implements WebFilter {
                 .switchIfEmpty(Mono.defer(() -> chain.filter(exchange)));
     }
 
-    private Mono<Void> forward(
+    /** Injeta os headers do usuário autenticado na requisição encaminhada. */
+    Mono<Void> forward(
             ServerWebExchange exchange, WebFilterChain chain, Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
             return chain.filter(exchange);
