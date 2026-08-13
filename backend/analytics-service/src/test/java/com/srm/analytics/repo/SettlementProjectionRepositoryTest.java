@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 
 import com.srm.common.event.SettlementEvent;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -56,7 +57,7 @@ class SettlementProjectionRepositoryTest {
                         eq(event.settlementCurrency()),
                         eq(event.exchangeRateApplied()),
                         eq(event.status()),
-                        eq(event.settledAt()));
+                        eq(Timestamp.from(event.settledAt())));
     }
 
     @Test
@@ -68,12 +69,7 @@ class SettlementProjectionRepositoryTest {
         repository.updateDailySummary(event);
 
         verify(jdbcTemplate)
-                .update(
-                        anyString(),
-                        eq(LocalDate.of(2026, 8, 12)),
-                        eq(event.settlementCurrency()),
-                        eq(event.presentValue()),
-                        eq(event.discountValue()));
+                .update(anyString(), eq(LocalDate.of(2026, 8, 12)), eq(event.settlementCurrency()));
     }
 
     @Test
@@ -98,11 +94,6 @@ class SettlementProjectionRepositoryTest {
         repository.updateDailySummary(event);
 
         verify(jdbcTemplate)
-                .update(
-                        anyString(),
-                        eq(LocalDate.now()),
-                        eq(event.settlementCurrency()),
-                        eq(event.presentValue()),
-                        eq(event.discountValue()));
+                .update(anyString(), eq(LocalDate.now()), eq(event.settlementCurrency()));
     }
 }

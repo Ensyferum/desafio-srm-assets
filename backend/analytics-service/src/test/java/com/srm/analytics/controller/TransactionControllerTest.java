@@ -71,6 +71,16 @@ class TransactionControllerTest {
     }
 
     @Test
+    void sortsAscendingByMappedColumn() throws Exception {
+        when(analyticsRepository.findSettlements(
+                        any(), any(), any(), any(), any(PageRequest.class)))
+                .thenReturn(PageResponse.of(List.of(), PageRequest.of(0, 20), 0));
+
+        mockMvc.perform(get("/api/v1/transactions").param("sort", "presentValue,asc"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void toleratesMalformedSort() throws Exception {
         when(analyticsRepository.findSettlements(
                         any(), any(), any(), any(), any(PageRequest.class)))

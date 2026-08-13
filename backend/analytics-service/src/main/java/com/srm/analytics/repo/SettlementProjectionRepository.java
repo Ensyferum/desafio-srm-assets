@@ -1,6 +1,7 @@
 package com.srm.analytics.repo;
 
 import com.srm.common.event.SettlementEvent;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -40,9 +41,14 @@ public class SettlementProjectionRepository {
                 event.settlementCurrency(),
                 event.exchangeRateApplied(),
                 event.status(),
-                event.settledAt());
+                event.settledAt() == null ? null : Timestamp.from(event.settledAt()));
     }
 
+    /**
+     * Recalcula o resumo do dia a partir da {@code settlement_projection} (já upsertada antes).
+     * Recalcular em vez de incrementar torna a operação idempotente: redelivery de eventos (Kafka
+     * at-least-once) não duplica os totais do resumo.
+     */
     @Transactional
     public void updateDailySummary(SettlementEvent event) {
         LocalDate settledDate =
@@ -54,16 +60,19 @@ public class SettlementProjectionRepository {
                 INSERT INTO analytics.settlement_daily_summary (
                     summary_date, currency, total_transactions, total_present_value,
                     total_discount_value, updated_at)
-                VALUES (?, ?, 1, ?, ?, CURRENT_TIMESTAMP)
+                SELECT COALESCE(settled_at, CURRENT_TIMESTAMP)::date, settlement_currency,
+                       COUNT(*), SUM(present_value), SUM(discount_value), CURRENT_TIMESTAMP
+                FROM analytics.settlement_projection
+                WHERE COALESCE(settled_at, CURRENT_TIMESTAMP)::date = ?
+                  AND settlement_currency = ?
+                GROUP BY COALESCE(settled_at, CURRENT_TIMESTAMP)::date, settlement_currency
                 ON CONFLICT (summary_date, currency) DO UPDATE SET
-                    total_transactions = analytics.settlement_daily_summary.total_transactions + 1,
-                    total_present_value = analytics.settlement_daily_summary.total_present_value + EXCLUDED.total_present_value,
-                    total_discount_value = analytics.settlement_daily_summary.total_discount_value + EXCLUDED.total_discount_value,
+                    total_transactions = EXCLUDED.total_transactions,
+                    total_present_value = EXCLUDED.total_present_value,
+                    total_discount_value = EXCLUDED.total_discount_value,
                     updated_at = CURRENT_TIMESTAMP
                 """,
                 settledDate,
-                event.settlementCurrency(),
-                event.presentValue(),
-                event.discountValue());
+                event.settlementCurrency());
     }
 }
