@@ -1,6 +1,5 @@
 package com.srm.currency.fx;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.srm.currency.dto.ExchangeRateResponse;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -10,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Cache de taxas de câmbio (Redis, TTL padrão 5 min — RNF04).
