@@ -3,10 +3,8 @@
 -- Schema: credit
 -- ============================================
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 CREATE TABLE receivable_type (
-    id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name           VARCHAR(100) NOT NULL UNIQUE,
     spread_monthly DECIMAL(10, 6) NOT NULL CHECK (spread_monthly >= 0),
     description    TEXT,
@@ -15,7 +13,7 @@ CREATE TABLE receivable_type (
 );
 
 CREATE TABLE receivable (
-    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     cedente_id  UUID NOT NULL,
     type_id     UUID NOT NULL REFERENCES receivable_type(id),
     face_value  DECIMAL(20, 2) NOT NULL CHECK (face_value > 0),
@@ -34,7 +32,7 @@ CREATE INDEX idx_receivable_status ON receivable(status);
 CREATE INDEX idx_receivable_due_date ON receivable(due_date);
 
 CREATE TABLE transaction (
-    id                    UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     receivable_id         UUID NOT NULL REFERENCES receivable(id),
     present_value         DECIMAL(20, 2) NOT NULL CHECK (present_value > 0),
     discount_value        DECIMAL(20, 2) NOT NULL CHECK (discount_value >= 0),

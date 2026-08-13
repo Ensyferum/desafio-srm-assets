@@ -3,10 +3,8 @@
 -- Schema: currency
 -- ============================================
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 CREATE TABLE currency (
-    id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code       VARCHAR(3)  NOT NULL UNIQUE CHECK (code IN ('BRL', 'USD')),
     name       VARCHAR(50) NOT NULL,
     symbol     VARCHAR(5)  NOT NULL,
@@ -16,7 +14,7 @@ CREATE TABLE currency (
 );
 
 CREATE TABLE exchange_rate (
-    id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     from_currency  VARCHAR(3)   NOT NULL REFERENCES currency(code),
     to_currency    VARCHAR(3)   NOT NULL REFERENCES currency(code),
     rate           DECIMAL(20, 10) NOT NULL CHECK (rate > 0),

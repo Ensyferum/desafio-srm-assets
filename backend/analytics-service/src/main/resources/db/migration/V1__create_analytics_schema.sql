@@ -3,8 +3,6 @@
 -- Schema: analytics (projeções de leitura — CQRS)
 -- ============================================
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- Projeção denormalizada do extrato de liquidações (RF05)
 CREATE TABLE settlement_projection (
     transaction_id        UUID PRIMARY KEY,
