@@ -3,34 +3,37 @@ spring:
     name: gateway-service
   cloud:
     gateway:
-      routes:
-        - id: auth-service
-          uri: ${AUTH_SERVICE_URI:http://auth-service:8080}
-          predicates:
-            - Path=/api/v1/auth/**
+      # SCG 5.x: prefixo de configuração mudou para server.webflux
+      server:
+        webflux:
+          routes:
+            - id: auth-service
+              uri: ${AUTH_SERVICE_URI:http://auth-service:8080}
+              predicates:
+                - Path=/api/v1/auth/**
 
-        - id: currency-service
-          uri: ${CURRENCY_SERVICE_URI:http://currency-service:8080}
-          predicates:
-            - Path=/api/v1/exchange-rates/**,/api/v1/currencies/**
+            - id: currency-service
+              uri: ${CURRENCY_SERVICE_URI:http://currency-service:8080}
+              predicates:
+                - Path=/api/v1/exchange-rates/**,/api/v1/currencies/**
 
-        - id: credit-service
-          uri: ${CREDIT_SERVICE_URI:http://credit-service:8080}
-          predicates:
-            - Path=/api/v1/receivables/**,/api/v1/receivable-types/**
+            - id: credit-service
+              uri: ${CREDIT_SERVICE_URI:http://credit-service:8080}
+              predicates:
+                - Path=/api/v1/receivables/**,/api/v1/receivable-types/**
 
-        - id: analytics-service
-          uri: ${ANALYTICS_SERVICE_URI:http://analytics-service:8080}
-          predicates:
-            - Path=/api/v1/transactions/**,/api/v1/analytics/**
+            - id: analytics-service
+              uri: ${ANALYTICS_SERVICE_URI:http://analytics-service:8080}
+              predicates:
+                - Path=/api/v1/transactions/**,/api/v1/analytics/**
 
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedOrigins: "http://localhost:3000,http://localhost:5173"
-            allowedMethods: "*"
-            allowedHeaders: "*"
-            exposedHeaders: "X-Correlation-Id"
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins: "http://localhost:3000,http://localhost:5173"
+                allowedMethods: "*"
+                allowedHeaders: "*"
+                exposedHeaders: "X-Correlation-Id"
 
 app:
   jwt:
