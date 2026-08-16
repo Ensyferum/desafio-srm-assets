@@ -14,6 +14,7 @@
 #   Grafana   http://localhost:3000 (admin / GRAFANA_ADMIN_PASSWORD)
 #
 # Portas:
+#   frontend         3000 (painel do operador)
 #   gateway-service  8080 (entrada pública da API)
 #   auth-service     8081 · currency-service 8082 · credit-service 8083 · analytics-service 8084
 #   postgres 5432 · redis 6379 · kafka 9092 (host) / 29092 (interna)
@@ -263,6 +264,21 @@ services:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ==========================================================
+  # Frontend (React + Vite, servido por nginx)
+  # ==========================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: srm-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      gateway-service:
         condition: service_healthy
     restart: unless-stopped
 
