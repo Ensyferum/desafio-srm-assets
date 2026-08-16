@@ -39,6 +39,57 @@ app:
   jwt:
     secret: ${JWT_SECRET:c2VjdXJlLWRldi1zZWNyZXQtY2hhbmdlLW1lLWluLXByb2R1Y3Rpb24tMjAyNi1zcm0tc3Jt}
     issuer: ${JWT_ISSUER:https://srm-credit-engine}
+  rbac:
+    enabled: true
+    default-deny: true
+    source-type: config
+    rules:
+      - id: auth-login-public
+        method: POST
+        path-pattern: /api/v1/auth/login
+        permit-all: true
+        priority: 1000
+        enabled: true
+      - id: actuator-health-public
+        method: '*'
+        path-pattern: /actuator/health/**
+        permit-all: true
+        priority: 1000
+        enabled: true
+      - id: auth-users-admin
+        method: POST
+        path-pattern: /api/v1/auth/users/**
+        roles: [ADMIN]
+        priority: 900
+        enabled: true
+      - id: exchange-rates-managers
+        method: '*'
+        path-pattern: /api/v1/exchange-rates/**
+        roles: [MANAGER, ADMIN]
+        priority: 800
+        enabled: true
+      - id: receivables-operators
+        method: POST
+        path-pattern: /api/v1/receivables/**
+        roles: [OPERATOR, MANAGER, ADMIN]
+        priority: 800
+        enabled: true
+      - id: refresh-rbac-admin
+        method: '*'
+        path-pattern: /actuator/refresh-rbac
+        roles: [ADMIN]
+        priority: 850
+        enabled: true
+      - id: api-v1-authenticated
+        method: '*'
+        path-pattern: /api/v1/**
+        priority: 100
+        enabled: true
+      - id: actuator-authenticated
+        method: '*'
+        path-pattern: /actuator/**
+        priority: 50
+        enabled: true
 
 server:
   port: ${PORT:8080}
@@ -47,7 +98,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus,metrics
+        include: health,info,prometheus,metrics,refresh-rbac
   endpoint:
     health:
       probes:

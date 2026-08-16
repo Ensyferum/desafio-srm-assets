@@ -8,6 +8,9 @@ import java.time.Instant;
 import java.util.Base64;
 import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.authorization.AuthorizationResult;
+import org.springframework.security.authorization.ReactiveAuthorizationManager;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
@@ -17,6 +20,8 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.authorization.AuthorizationContext;
+import reactor.core.publisher.Mono;
 
 class SecurityConfigTest {
 
@@ -43,9 +48,17 @@ class SecurityConfigTest {
                 config.securityWebFilterChain(
                         ServerHttpSecurity.http(),
                         new JwtRolesConverter(),
-                        config.jwtDecoder(SECRET));
+                        config.jwtDecoder(SECRET),
+                        allowAllAuthorizationManager());
 
         assertThat(chain).isNotNull();
+    }
+
+    private ReactiveAuthorizationManager<AuthorizationContext> allowAllAuthorizationManager() {
+        return (authentication, context) -> {
+            AuthorizationResult decision = new AuthorizationDecision(true);
+            return Mono.just(decision);
+        };
     }
 
     /** Emite tokens HS256 apenas para os testes. */

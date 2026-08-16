@@ -251,6 +251,21 @@ curl -s "$BASE/api/v1/transactions?startDate=2026-08-13&endDate=2026-11-11" \
 
 **Erros:** resposta padronizada com `requestId` (CorrelationId), `status`, `message` e `timestamp`; validação → `400`, não autorizado → `401`, proibido → `403`, conflito de versão (locking) → `409`.
 
+### RBAC dinâmico no gateway (sem restart)
+
+- As regras de autorização `rota + método + roles` são externas em `backend/gateway-service/src/main/resources/application.yml` no bloco `app.rbac.rules`.
+- Cada regra suporta: `id`, `method` (`*` para qualquer método), `path-pattern` (`/api/admin/**`), `roles`, `permit-all`, `priority` e `enabled`.
+- O gateway usa *default deny* (`app.rbac.default-deny=true`): se nenhuma regra casar, a requisição é negada.
+- O endpoint `POST /actuator/refresh-rbac` deve permanecer protegido por role administrativa (`ADMIN`) na própria matriz de regras.
+- Para atualizar regras em runtime, altere a configuração externa e dispare:
+
+```bash
+curl -X POST http://localhost:8080/actuator/refresh-rbac \
+  -H "Authorization: ******"
+```
+
+Resposta inclui `refreshed`, `rulesCount` e `version` do snapshot ativo.
+
 ---
 
 ## 🗄️ Modelo de dados (ER)
