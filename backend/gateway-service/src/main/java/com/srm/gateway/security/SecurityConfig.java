@@ -1,17 +1,21 @@
 package com.srm.gateway.security;
 
+import com.srm.gateway.security.rbac.RbacProperties;
 import java.util.Base64;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authorization.ReactiveAuthorizationManager;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.authorization.AuthorizationContext;
 
 /**
  * Segurança do gateway (RNF03): valida o JWT HS256 emitido pelo auth-service e aplica autorização
@@ -19,12 +23,14 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
  */
 @Configuration
 @EnableWebFluxSecurity
+@EnableConfigurationProperties(RbacProperties.class)
 public class SecurityConfig {
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(
             ServerHttpSecurity http,
             JwtRolesConverter jwtRolesConverter,
-            ReactiveJwtDecoder jwtDecoder) {
+            ReactiveJwtDecoder jwtDecoder,
+            ReactiveAuthorizationManager<AuthorizationContext> dynamicAuthorizationManager) {
         http.csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(
                         exchanges ->
@@ -33,23 +39,8 @@ public class SecurityConfig {
                                         .permitAll()
                                         .pathMatchers("/actuator/health", "/actuator/health/**")
                                         .permitAll()
-                                        .pathMatchers(HttpMethod.POST, "/api/v1/auth/users/**")
-                                        .hasRole("ADMIN")
-                                        .pathMatchers(HttpMethod.POST, "/api/v1/exchange-rates/**")
-                                        .hasAnyRole("MANAGER", "ADMIN")
-                                        .pathMatchers(HttpMethod.PUT, "/api/v1/exchange-rates/**")
-                                        .hasAnyRole("MANAGER", "ADMIN")
-                                        .pathMatchers(HttpMethod.PATCH, "/api/v1/exchange-rates/**")
-                                        .hasAnyRole("MANAGER", "ADMIN")
-                                        .pathMatchers(
-                                                HttpMethod.DELETE, "/api/v1/exchange-rates/**")
-                                        .hasAnyRole("MANAGER", "ADMIN")
-                                        .pathMatchers(HttpMethod.POST, "/api/v1/receivables/**")
-                                        .hasAnyRole("OPERATOR", "MANAGER", "ADMIN")
-                                        .pathMatchers("/api/v1/**")
-                                        .authenticated()
                                         .anyExchange()
-                                        .authenticated())
+                                        .access(dynamicAuthorizationManager))
                 .oauth2ResourceServer(
                         oauth2 ->
                                 oauth2.jwt(
