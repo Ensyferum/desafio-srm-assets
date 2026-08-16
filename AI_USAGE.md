@@ -15,6 +15,7 @@
 | Infra | "Kafka cp-kafka 7.9 em KRaft não sobe no compose" | `CLUSTER_ID` literal + listeners com hostname do serviço (não `0.0.0.0`) + healthcheck `cub kafka-ready` no listener interno |
 | E2E | "Escreva um smoke test que percorra o fluxo de negócio completo pelo gateway" | `scripts/e2e-smoke.sh` — 10/10 checks verdes |
 | Qualidade | "Rode mvn verify e corrija o que falhar" | Testes + cobertura JaCoCo ≥ 80% em todos os módulos |
+| Frontend | "Implemente o painel do operador (React) conforme a spec" | React 19 + Vite 6 + TS + Tailwind 4: login, dashboard, simulação em tempo real, recebíveis/liquidação, taxas FX, extrato — validado no compose (:3000) |
 
 ## 2. Onde a IA alucinou / gerou código inseguro — e como foi corrigido
 
@@ -29,6 +30,7 @@
 | 7 | Kafka KRaft com `KAFKA_CLUSTER_ID` e listeners `0.0.0.0` | Entrypoint do cp-kafka rejeitava o format | Reproduzido o fluxo `configure → format` em container one-off; corrigido para `CLUSTER_ID` + hostnames no `listeners` |
 | 8 | `Instant` passado direto ao JDBC no analytics | `PSQLException` em runtime (coluna `timestamptz`) | Convertido para `java.sql.Timestamp` no repositório; teste atualizado |
 | 9 | Nome de campo errado no E2E (`presentValueInSettlement`) | Campo ausente no JSON real | Campo real é `presentValueInSettlementCurrency` — confirmado no DTO e corrigido no script |
+| 10 | Frontend: `exchangeRateApplied` tipado como `number` | Typecheck não acusava, mas o backend devolve `null` para moedas iguais (BRL→BRL) | Tipos corrigidos para `number \| null` + guards nos componentes (descoberto na revisão de código, não em runtime) |
 
 > Regra aplicada em todos os casos: **nenhuma correção foi aceita por "confiança" — cada uma foi reproduzida e validada** (jar inspecionado, container one-off, bytecode, respostas reais da API).
 

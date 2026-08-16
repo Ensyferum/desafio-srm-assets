@@ -53,8 +53,8 @@ O fundo **SRM Asset** opera FIDCs e compra ativos (duplicatas, cheques, recebív
 | Qualidade | **Spotless** (formatação/lint) + **Husky** hooks |
 | Observabilidade | **OpenTelemetry** (traces → Jaeger), **Prometheus + Grafana** (métricas) |
 | Infra | **Docker Compose** único (8 containers + perfil observabilidade) |
-| CI/CD | **GitHub Actions** (build, testes, cobertura, lint, validação do compose) |
-| Frontend | **React** (em desenvolvimento — ver [Roadmap](#-roadmap)) |
+| CI/CD | **GitHub Actions** (backend + frontend + validação do compose) |
+| Frontend | **React 19 + Vite 6 + TypeScript + Tailwind CSS 4** (painel do operador, servido por nginx) |
 
 > ⚠️ **Nota Boot 4.1:** o Spring Boot 4 extraiu vários auto-configurations para módulos separados. Este projeto usa `spring-boot-starter-flyway`, `spring-boot-starter-kafka` e `spring-boot-restclient` (detalhes nos [ADRs](docs/ADRs.md)).
 
@@ -106,7 +106,6 @@ O fundo **SRM Asset** opera FIDCs e compra ativos (duplicatas, cheques, recebív
 ## 📁 Estrutura do repositório
 
 ```
-.
 ├── backend/
 │   ├── pom.xml                     # parent Maven (Java 25, Boot 4.1, JaCoCo 80%, Spotless)
 │   ├── Dockerfile                  # multi-stage: 1 imagem por serviço (targets)
@@ -116,6 +115,13 @@ O fundo **SRM Asset** opera FIDCs e compra ativos (duplicatas, cheques, recebív
 │   ├── currency-service/           # moedas + taxas de câmbio (Redis cache, Kafka publisher)
 │   ├── credit-service/             # recebíveis, tipos, precificação (Strategy), liquidação (ACID)
 │   └── analytics-service/          # CQRS: consumer Kafka → projeções → extrato/resumo
+├── frontend/
+│   ├── Dockerfile                  # multi-stage: Node 22 build → nginx (SPA)
+│   ├── nginx.conf                  # SPA fallback + proxy /api → gateway
+│   └── src/
+│       ├── pages/                  # Login, Dashboard, Simulação, Recebíveis, Taxas, Extrato
+│       ├── components/             # Layout, StatCard, Card, Badge, Money, Field, Spinner
+│       └── lib/                    # api client (JWT), auth context, formatters pt-BR, hooks
 ├── deploy/
 │   ├── prometheus/prometheus.yml   # scrape dos serviços
 │   └── grafana/provisioning/       # datasource automático
@@ -145,18 +151,22 @@ docker compose up -d --build
 # 3. Acompanhe a subida (todos devem ficar "healthy")
 docker compose ps
 
-# 4. Smoke test E2E (login → taxa → simulação → lote → liquidação → extrato)
+# 4. Acesse o painel do operador
+open http://localhost:3000
+
+# 5. Smoke test E2E (login → taxa → simulação → lote → liquidação → extrato)
 ./scripts/e2e-smoke.sh
 
-# 5. Logs de um serviço
+# 6. Logs de um serviço
 docker compose logs -f credit-service
 
-# 6. Para derrubar (com volumes: docker compose down -v)
+# 7. Para derrubar (com volumes: docker compose down -v)
 docker compose down
 ```
 
 | Serviço | Porta | Healthcheck |
 |---|---|---|
+| **frontend** | **3000** (painel do operador — React/nginx) | wget na página |
 | gateway-service | **8080** (entrada da API) | actuator |
 | auth-service | 8081 | actuator |
 | currency-service | 8082 | actuator |
@@ -172,6 +182,8 @@ docker compose down
 
 ## 🔑 Credenciais de demonstração
 
+> O painel exibe os três usuários com um clique na tela de login (modo demonstração).
+
 Semeadas automaticamente pelo `auth-service` na primeira subida (variáveis `SEED_*` no compose):
 
 | Usuário | Senha | Role |
@@ -180,7 +192,7 @@ Semeadas automaticamente pelo `auth-service` na primeira subida (variáveis `SEE
 | `manager` | `Manager@123` | MANAGER (pode registrar taxas de câmbio) |
 | `operator` | `Operator@123` | OPERATOR |
 
-> ⚠️ **Apenas para desenvolvimento.** Em produção, defina no `.env` senhas fortes e um `JWT_SECRET` novo (o fallback do compose é um valor conhecido), além de `POSTGRES_PASSWORD`.
+> ⚠️ **Apenas para desenvolvimento.** Em produção, defina no `.env` senhas fortes e um `JWT_SECRET` novo (o fallback do compose é um valor conhecido), além de `POSTGRES_PASSWORD`. O frontend armazena o JWT em `localStorage` (aceitável para o desafio); em produção, migre para cookie `httpOnly` e remova o autofill de credenciais da tela de login.
 
 ---
 
@@ -386,7 +398,8 @@ Evolução incremental a partir desta base (detalhes nos ADRs e na spec):
 - [x] Infra: Docker Compose completo, Kafka KRaft, Redis, observabilidade (Jaeger/Prometheus/Grafana)
 - [x] Testes: JUnit5/Mockito, cobertura ≥ 80%, hooks, CI
 - [x] Smoke test E2E do fluxo completo (10/10)
-- [ ] **Frontend React** (painel do operador com simulação em tempo real + grid de transações) — o CI já possui o job preparado
+- [x] **Frontend React** — painel do operador (login, dashboard, simulação em tempo real, recebíveis/liquidação, taxas FX e extrato paginado)
+- [ ] Gráficos avançados (séries temporais, distribuição por cedente) e exportação CSV/PDF do extrato
 
 ---
 
