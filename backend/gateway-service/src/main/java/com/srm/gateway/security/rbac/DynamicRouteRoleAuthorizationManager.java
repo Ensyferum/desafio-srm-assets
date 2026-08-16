@@ -151,9 +151,18 @@ public class DynamicRouteRoleAuthorizationManager
             String ruleId,
             String version,
             String reason) {
+        if (granted) {
+            LOGGER.debug(
+                    "rbac_decision outcome=ALLOW method={} path={} ruleId={} version={} reason={}",
+                    method,
+                    path,
+                    ruleId,
+                    version,
+                    reason);
+            return;
+        }
         LOGGER.info(
-                "rbac_decision outcome={} method={} path={} ruleId={} version={} reason={}",
-                granted ? "ALLOW" : "DENY",
+                "rbac_decision outcome=DENY method={} path={} ruleId={} version={} reason={}",
                 method,
                 path,
                 ruleId,

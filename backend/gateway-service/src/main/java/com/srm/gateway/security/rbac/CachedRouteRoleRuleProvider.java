@@ -17,9 +17,7 @@ public class CachedRouteRoleRuleProvider implements RouteRoleRuleProvider {
     private static final Comparator<RouteRoleRule> RULE_ORDER =
             Comparator.comparingInt(RouteRoleRule::priority)
                     .reversed()
-                    .thenComparing(
-                            rule -> rule.pathPattern() == null ? 0 : rule.pathPattern().length(),
-                            Comparator.reverseOrder())
+                    .thenComparing(rule -> rule.pathPattern().length(), Comparator.reverseOrder())
                     .thenComparing(RouteRoleRule::id);
 
     private final RouteRoleRuleSource source;
