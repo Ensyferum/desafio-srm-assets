@@ -119,7 +119,7 @@ O fundo **SRM Asset** opera FIDCs e compra ativos (duplicatas, cheques, recebív
 │   ├── Dockerfile                  # multi-stage: Node 22 build → nginx (SPA)
 │   ├── nginx.conf                  # SPA fallback + proxy /api → gateway
 │   └── src/
-│       ├── pages/                  # Login, Dashboard, Simulação, Recebíveis, Taxas, Extrato
+│       ├── pages/                  # Login, Dashboard, Simulação, Recebíveis (abas lista/lote/liquidação), Taxas, Extrato
 │       ├── components/             # Layout, StatCard, Card, Badge, Money, Field, Spinner
 │       └── lib/                    # api client (JWT), auth context, formatters pt-BR, hooks
 ├── deploy/
@@ -152,7 +152,7 @@ docker compose up -d --build
 docker compose ps
 
 # 4. Acesse o painel do operador
-open http://localhost:3000
+open http://localhost:3001
 
 # 5. Smoke test E2E (login → taxa → simulação → lote → liquidação → extrato)
 ./scripts/e2e-smoke.sh
@@ -166,7 +166,7 @@ docker compose down
 
 | Serviço | Porta | Healthcheck |
 |---|---|---|
-| **frontend** | **3000** (painel do operador — React/nginx) | wget na página |
+| **frontend** | **3001** (painel do operador — React/nginx) | wget na página |
 | gateway-service | **8080** (entrada da API) | actuator |
 | auth-service | 8081 | actuator |
 | currency-service | 8082 | actuator |
@@ -231,6 +231,7 @@ Todas as rotas passam pelo **gateway (`:8080`)** e exigem `Authorization: Bearer
 | POST | `/api/v1/receivables` | credit | Lote de recebíveis — RF02 |
 | POST | `/api/v1/receivables/{id}/settle` | credit | **Liquidação** (ACID) — RF03/RF04 |
 | GET | `/api/v1/receivables/{id}` | credit | Detalhe do recebível |
+| GET | `/api/v1/receivables` | credit | Lista de recebíveis (filtros `status`/`currency`/`cedenteId` + paginação) |
 | GET | `/api/v1/transactions` | analytics | **Extrato** de liquidações (CQRS) — RF05 |
 | GET | `/api/v1/analytics/summary` | analytics | Resumo diário (dashboard) |
 
@@ -340,7 +341,7 @@ Resultado atual (14/08/2026):
 | srm-common | ✅ | 83,0% |
 | auth-service | ✅ | 91,0% |
 | currency-service | ✅ | 84,9% |
-| credit-service | ✅ | 84,6% |
+| credit-service | ✅ | 85,7% |
 | analytics-service | ✅ | 97,7% |
 
 ### CI (GitHub Actions — `.github/workflows/ci.yml`)
@@ -398,8 +399,8 @@ Evolução incremental a partir desta base (detalhes nos ADRs e na spec):
 - [x] Infra: Docker Compose completo, Kafka KRaft, Redis, observabilidade (Jaeger/Prometheus/Grafana)
 - [x] Testes: JUnit5/Mockito, cobertura ≥ 80%, hooks, CI
 - [x] Smoke test E2E do fluxo completo (10/10)
-- [x] **Frontend React** — painel do operador (login, dashboard, simulação em tempo real, recebíveis/liquidação, taxas FX e extrato paginado)
-- [ ] Gráficos avançados (séries temporais, distribuição por cedente) e exportação CSV/PDF do extrato
+- [x] **Frontend React** — painel do operador (login, dashboard com KPIs e gráfico temporável barras/linhas/donut, simulação em tempo real, lista de recebíveis com filtros + lote + liquidação, taxas FX e extrato paginado)
+- [ ] Séries temporais e distribuição por cedente nos gráficos; exportação CSV/PDF do extrato
 
 ---
 
