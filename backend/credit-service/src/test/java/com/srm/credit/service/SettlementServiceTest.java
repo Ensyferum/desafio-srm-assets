@@ -70,7 +70,7 @@ class SettlementServiceTest {
         ReceivableType type =
                 new ReceivableType("Duplicata Mercantil", new BigDecimal("0.015"), "Título");
         return new Receivable(
-                UUID.randomUUID(),
+                "11222333000181",
                 type,
                 new BigDecimal("100000.00"),
                 LocalDate.now().plusDays(90),

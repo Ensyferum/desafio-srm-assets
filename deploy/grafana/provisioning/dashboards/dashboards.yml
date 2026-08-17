@@ -1,0 +1,16 @@
+# ============================================================
+# SRM Credit Engine — Provisionamento de dashboards
+# ============================================================
+apiVersion: 1
+
+providers:
+  - name: SRM
+    orgId: 1
+    folder: SRM
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false

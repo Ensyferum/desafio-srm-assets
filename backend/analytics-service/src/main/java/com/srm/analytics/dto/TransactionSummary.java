@@ -8,7 +8,7 @@ import java.util.UUID;
 public record TransactionSummary(
         UUID transactionId,
         UUID receivableId,
-        UUID cedenteId,
+        String cedenteDocument,
         BigDecimal faceValue,
         BigDecimal presentValue,
         BigDecimal discountValue,

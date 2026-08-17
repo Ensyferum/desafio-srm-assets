@@ -8,7 +8,7 @@ import { Spinner } from '../../components/Spinner';
 import { Badge } from '../../components/Badge';
 import { Pagination } from '../../components/Pagination';
 import { api } from '../../lib/api';
-import { formatDate } from '../../lib/format';
+import { formatDate, formatDocument } from '../../lib/format';
 import { useAsync } from '../../lib/useAsync';
 import type { PageResponse, ReceivableResponse } from '../../lib/types';
 
@@ -119,8 +119,8 @@ export function ReceivablesListTab({ onSettle }: ReceivablesListTabProps) {
                     </span>
                   </td>
                   <td className="px-5 py-3">
-                    <span className="font-mono text-xs text-slate-400" title={r.cedenteId}>
-                      {r.cedenteId.slice(0, 8)}…
+                    <span className="font-mono text-xs text-slate-300" title={r.cedenteDocument}>
+                      {formatDocument(r.cedenteDocument)}
                     </span>
                   </td>
                   <td className="px-5 py-3 text-slate-300">{r.receivableTypeName}</td>

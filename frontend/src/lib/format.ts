@@ -57,6 +57,14 @@ export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** CNPJ: 11222333000181 → 11.222.333/0001-81 (retorna o valor original se inválido). */
+export function formatDocument(value: string | null | undefined): string {
+  if (!value) return '—';
+  const digits = value.replace(/\D/g, '');
+  if (digits.length !== 14) return value;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+}
+
 export function addDaysISO(days: number): string {
   const date = new Date();
   date.setDate(date.getDate() + days);

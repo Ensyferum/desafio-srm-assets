@@ -6,7 +6,6 @@ import com.srm.analytics.repo.SettlementAnalyticsRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.LocalDate;
-import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -33,13 +32,13 @@ public class TransactionController {
     @Operation(
             summary = "Extrato de liquidações com filtros",
             description =
-                    "Filtros: startDate, endDate, cedenteId, currency. Paginação: page, size, sort.")
+                    "Filtros: startDate, endDate, cedenteDocument, currency. Paginação: page, size, sort.")
     public PageResponse<TransactionSummary> list(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
                     LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
                     LocalDate endDate,
-            @RequestParam(required = false) UUID cedenteId,
+            @RequestParam(required = false) String cedenteDocument,
             @RequestParam(required = false) String currency,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -48,7 +47,7 @@ public class TransactionController {
         Sort order = parseSort(sort);
         PageRequest pageable = PageRequest.of(Math.max(0, page), Math.min(size, 100), order);
         return analyticsRepository.findSettlements(
-                startDate, endDate, cedenteId, currency, pageable);
+                startDate, endDate, cedenteDocument, currency, pageable);
     }
 
     private Sort parseSort(String sort) {

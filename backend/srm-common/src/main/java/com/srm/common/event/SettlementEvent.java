@@ -11,7 +11,7 @@ import java.util.UUID;
 public record SettlementEvent(
         UUID transactionId,
         UUID receivableId,
-        UUID cedenteId,
+        String cedenteDocument,
         BigDecimal faceValue,
         BigDecimal presentValue,
         BigDecimal discountValue,

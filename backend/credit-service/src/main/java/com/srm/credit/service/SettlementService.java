@@ -100,7 +100,7 @@ public class SettlementService {
                 new SettlementEvent(
                         transaction.getId(),
                         receivable.getId(),
-                        receivable.getCedenteId(),
+                        receivable.getCedenteDocument(),
                         receivable.getFaceValue(),
                         transaction.getPresentValue(),
                         transaction.getDiscountValue(),

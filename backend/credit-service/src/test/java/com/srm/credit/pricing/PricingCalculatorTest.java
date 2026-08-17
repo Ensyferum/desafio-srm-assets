@@ -15,7 +15,6 @@ import com.srm.credit.fx.FxConversionService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -170,7 +169,7 @@ class PricingCalculatorTest {
         ReceivableType type = duplicata();
         Receivable receivable =
                 new Receivable(
-                        UUID.randomUUID(),
+                        "11222333000181",
                         type,
                         new BigDecimal("50000.00"),
                         AS_OF.plusDays(60),

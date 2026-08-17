@@ -34,14 +34,16 @@ public class SettlementAnalyticsRepository {
     public PageResponse<TransactionSummary> findSettlements(
             LocalDate startDate,
             LocalDate endDate,
-            UUID cedenteId,
+            String cedenteDocument,
             String currency,
             Pageable pageable) {
-        SqlQuery count = SettlementQueryBuilder.count(startDate, endDate, cedenteId, currency);
+        SqlQuery count =
+                SettlementQueryBuilder.count(startDate, endDate, cedenteDocument, currency);
         Long total = jdbcTemplate.queryForObject(count.sql(), Long.class, count.args().toArray());
 
         SqlQuery select =
-                SettlementQueryBuilder.select(startDate, endDate, cedenteId, currency, pageable);
+                SettlementQueryBuilder.select(
+                        startDate, endDate, cedenteDocument, currency, pageable);
         List<TransactionSummary> content =
                 jdbcTemplate.query(select.sql(), TRANSACTION_ROW_MAPPER, select.args().toArray());
 
@@ -99,7 +101,7 @@ public class SettlementAnalyticsRepository {
                     new TransactionSummary(
                             rs.getObject("transaction_id", UUID.class),
                             rs.getObject("receivable_id", UUID.class),
-                            rs.getObject("cedente_id", UUID.class),
+                            rs.getString("cedente_document"),
                             rs.getBigDecimal("face_value"),
                             rs.getBigDecimal("present_value"),
                             rs.getBigDecimal("discount_value"),

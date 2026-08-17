@@ -28,10 +28,10 @@ x-common-env: &common-env
   SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-srm_credit_engine}
   SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-srm_user}
   SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-srm_pass_2026}
+  # Tracing nativo via Micrometer/OTel (sem javaagent — incompatível com Boot 4.1/Tomcat 11).
+  # O endpoint é lido pelo application.yml (management.otlp.tracing.endpoint).
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4318}
   OTEL_JAVAAGENT_ENABLED: ${OTEL_JAVAAGENT_ENABLED:-false}
-  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
-  OTEL_METRICS_EXPORTER: none
-  OTEL_LOGS_EXPORTER: none
   PORT: 8080
 
 services:
@@ -103,7 +103,7 @@ services:
   # Observabilidade (perfil opcional)
   # ==========================================================
   jaeger:
-    image: jaegertracing/all-in-one:1.66
+    image: jaegertracing/all-in-one:1.76.0
     profiles: ["observability"]
     container_name: srm-jaeger
     environment:
@@ -177,9 +177,7 @@ services:
     container_name: srm-gateway
     environment:
       OTEL_JAVAAGENT_ENABLED: ${OTEL_JAVAAGENT_ENABLED:-false}
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
-      OTEL_METRICS_EXPORTER: none
-      OTEL_LOGS_EXPORTER: none
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4318}
       PORT: 8080
       AUTH_SERVICE_URI: http://auth-service:8080
       CURRENCY_SERVICE_URI: http://currency-service:8080

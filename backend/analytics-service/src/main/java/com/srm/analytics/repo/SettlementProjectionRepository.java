@@ -23,7 +23,7 @@ public class SettlementProjectionRepository {
         jdbcTemplate.update(
                 """
                 INSERT INTO analytics.settlement_projection (
-                    transaction_id, receivable_id, cedente_id, face_value, present_value,
+                    transaction_id, receivable_id, cedente_document, face_value, present_value,
                     discount_value, currency, settlement_currency, exchange_rate_applied,
                     status, settled_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -33,7 +33,7 @@ public class SettlementProjectionRepository {
                 """,
                 event.transactionId(),
                 event.receivableId(),
-                event.cedenteId(),
+                event.cedenteDocument(),
                 event.faceValue(),
                 event.presentValue(),
                 event.discountValue(),

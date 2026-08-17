@@ -79,13 +79,15 @@ public class ReceivableController {
     }
 
     @GetMapping
-    @Operation(summary = "Lista recebíveis com filtros (status, moeda, cedente) e paginação")
+    @Operation(
+            summary =
+                    "Lista recebíveis com filtros (status, moeda, documento do cedente) e paginação")
     public PageResponse<ReceivableResponse> list(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String currency,
-            @RequestParam(required = false) UUID cedenteId,
+            @RequestParam(required = false) String cedenteDocument,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
                     Pageable pageable) {
-        return receivableService.list(status, currency, cedenteId, pageable);
+        return receivableService.list(status, currency, cedenteDocument, pageable);
     }
 }

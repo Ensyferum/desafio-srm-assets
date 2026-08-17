@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDaysISO, formatDate, formatDateTime, formatMoney, formatNumber, formatRate, todayISO } from './format';
+import { addDaysISO, formatDate, formatDateTime, formatDocument, formatMoney, formatNumber, formatRate, todayISO } from './format';
 
 describe('formatMoney', () => {
   it('formata em BRL', () => {
@@ -39,6 +39,21 @@ describe('formatDate / formatDateTime', () => {
   it('retorna travessão para valores vazios', () => {
     expect(formatDate(null)).toBe('—');
     expect(formatDateTime(undefined)).toBe('—');
+  });
+});
+
+describe('formatDocument', () => {
+  it('formata CNPJ com máscara', () => {
+    expect(formatDocument('11222333000181')).toBe('11.222.333/0001-81');
+  });
+
+  it('retorna valor original quando não tem 14 dígitos', () => {
+    expect(formatDocument('123')).toBe('123');
+  });
+
+  it('retorna travessão para vazios', () => {
+    expect(formatDocument(null)).toBe('—');
+    expect(formatDocument(undefined)).toBe('—');
   });
 });
 

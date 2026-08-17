@@ -14,7 +14,7 @@ import type {
 } from '../../lib/types';
 
 interface BatchItem {
-  cedenteId: string;
+  cedenteDocument: string;
   receivableTypeId: string;
   faceValue: string;
   dueDate: string;
@@ -23,7 +23,7 @@ interface BatchItem {
 
 function newItem(types: ReceivableTypeResponse[] | null): BatchItem {
   return {
-    cedenteId: '11111111-1111-1111-1111-111111111111',
+    cedenteDocument: '11222333000181',
     receivableTypeId: types?.[0]?.id ?? '',
     faceValue: '',
     dueDate: addDaysISO(90),
@@ -59,7 +59,7 @@ export function BatchTab() {
     try {
       const response = await api.post<CreateReceivablesBatchResponse>('/receivables', {
         receivables: items.map((item) => ({
-          cedenteId: item.cedenteId,
+          cedenteDocument: item.cedenteDocument,
           receivableTypeId: item.receivableTypeId,
           faceValue: Number(item.faceValue),
           dueDate: item.dueDate,
@@ -104,11 +104,15 @@ export function BatchTab() {
               </button>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Field label="Cedente (ID)" required>
+              <Field label="Cedente (CNPJ)" required hint="Somente os 14 dígitos">
                 <TextInput
-                  value={item.cedenteId}
-                  onChange={(e) => updateItem(index, { cedenteId: e.target.value })}
-                  placeholder="uuid do cedente"
+                  value={item.cedenteDocument}
+                  onChange={(e) =>
+                    updateItem(index, { cedenteDocument: e.target.value.replace(/\D/g, '') })
+                  }
+                  placeholder="11222333000181"
+                  maxLength={14}
+                  inputMode="numeric"
                   className="font-mono text-xs"
                 />
               </Field>

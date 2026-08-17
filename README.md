@@ -124,7 +124,7 @@ O fundo **SRM Asset** opera FIDCs e compra ativos (duplicatas, cheques, recebív
 │       └── lib/                    # api client (JWT), auth context, formatters pt-BR, hooks
 ├── deploy/
 │   ├── prometheus/prometheus.yml   # scrape dos serviços
-│   └── grafana/provisioning/       # datasource automático
+│   └── grafana/provisioning/       # datasource + dashboards automáticos
 ├── scripts/
 │   ├── e2e-smoke.sh                # smoke test E2E do fluxo completo (10/10)
 │   └── check-backend.sh            # mvn via Docker (JDK 25) — usado pelo pre-push
@@ -206,11 +206,11 @@ docker compose --profile observability up -d --build
 
 | Ferramenta | URL | O quê |
 |---|---|---|
-| Jaeger | http://localhost:16686 | traces distribuídos (OTLP via OpenTelemetry agent) |
+| Jaeger | http://localhost:16686 | traces distribuídos (OTLP — tracing nativo do Micrometer, sem javaagent) |
 | Prometheus | http://localhost:9090 | métricas (`/actuator/prometheus`) |
 | Grafana | http://localhost:3010 | dashboards (admin / senha em `GRAFANA_ADMIN_PASSWORD`) |
 
-Para habilitar o agente OpenTelemetry: `OTEL_JAVAAGENT_ENABLED=true` no `.env`.
+> O tracing usa **OpenTelemetry nativo do Micrometer** (`management.opentelemetry.enabled=true`, bridge `micrometer-tracing-bridge-otel` + exporter OTLP apontando para `jaeger:4318`) — **sem javaagent** (`OTEL_JAVAAGENT_ENABLED=false`), que é incompatível com Spring Boot 4.1/Tomcat 11. Os **dashboards do Grafana são provisionados automaticamente** (pasta `deploy/grafana/provisioning/dashboards` — dashboard *SRM Credit Engine — Visão Geral* com métricas HTTP, JVM, liquidações e simulações).
 
 ---
 
@@ -231,8 +231,8 @@ Todas as rotas passam pelo **gateway (`:8080`)** e exigem `Authorization: Bearer
 | POST | `/api/v1/receivables` | credit | Lote de recebíveis — RF02 |
 | POST | `/api/v1/receivables/{id}/settle` | credit | **Liquidação** (ACID) — RF03/RF04 |
 | GET | `/api/v1/receivables/{id}` | credit | Detalhe do recebível |
-| GET | `/api/v1/receivables` | credit | Lista de recebíveis (filtros `status`/`currency`/`cedenteId` + paginação) |
-| GET | `/api/v1/transactions` | analytics | **Extrato** de liquidações (CQRS) — RF05 |
+| GET | `/api/v1/receivables` | credit | Lista de recebíveis (filtros `status`/`currency`/`cedenteDocument` + paginação) |
+| GET | `/api/v1/transactions` | analytics | **Extrato** de liquidações (CQRS) — RF05 (filtros `startDate`/`endDate`/`cedenteDocument`/`currency`) |
 | GET | `/api/v1/analytics/summary` | analytics | Resumo diário (dashboard) |
 
 ### Exemplos
@@ -285,7 +285,7 @@ credit
 ┌───────────────────────────┐     ┌──────────────────────────────────────────────────┐
 │ receivable_type           │     │ receivable                                        │
 │ id UUID PK                │     │ id UUID PK · version INT (optimistic lock)        │
-│ name VARCHAR              │     │ cedente_id UUID (indexado)                        │
+│ name VARCHAR              │     │ cedente_document VARCHAR(14)                        │
 │ spread DECIMAL(18,6)      │     │ receivable_type_id FK                             │
 │ days_in_month INT         │     │ face_value DECIMAL(18,2)                          │
 │ active BOOL               │     │ due_date DATE (indexado) · currency_id FK         │
@@ -308,7 +308,7 @@ analytics (CQRS — alimentado por SettlementEvent do Kafka)
 ┌───────────────────────────────────┐    ┌───────────────────────────────────────┐
 │ settlement_projection             │    │ settlement_daily_summary              │
 │ transaction_id UUID PK            │    │ summary_date DATE                     │
-│ receivable_id · cedente_id        │    │ currency VARCHAR(3)                   │
+│ receivable_id · cedente_doc        │    │ currency VARCHAR(3)                   │
 │ face_value · present_value        │    │ total_transactions BIGINT             │
 │ discount_value DECIMAL(18,2)      │    │ total_present_value DECIMAL(18,2)     │
 │ currency · settlement_currency    │    │ total_discount_value DECIMAL(18,2)    │
@@ -386,7 +386,7 @@ Evolução incremental a partir desta base (detalhes nos ADRs e na spec):
 
 - **Gateway** — escala horizontal atrás de load balancer; rate limiting (Redis) e circuit breaker por rota.
 - **PostgreSQL** — *read replicas* para analytics + *connection pooling* (PGBouncer); particionamento por data em `transaction` e `settlement_projection`.
-- **Kafka** — cluster multi-broker, *partitions* por `cedente_id` (garante ordenação por cedente), *idempotent producer*.
+- **Kafka** — cluster multi-broker, *partitions* por documento do cedente (garante ordenação por cedente), *idempotent producer*.
 - **Cache** — Redis para taxas FX e perfis de risco; cache de leitura no analytics.
 - **Consistência eventual** — o caminho de liquidação permanece ACID/forte; o analytics tolera latência de segundos (evento → projeção).
 - **Observabilidade** — traces (Jaeger/OTel) + métricas (Prometheus) + logs estruturados com `correlationId` para rastreio ponta a ponta.
@@ -400,6 +400,8 @@ Evolução incremental a partir desta base (detalhes nos ADRs e na spec):
 - [x] Testes: JUnit5/Mockito, cobertura ≥ 80%, hooks, CI
 - [x] Smoke test E2E do fluxo completo (10/10)
 - [x] **Frontend React** — painel do operador (login, dashboard com KPIs e gráfico temporável barras/linhas/donut, simulação em tempo real, lista de recebíveis com filtros + lote + liquidação, taxas FX e extrato paginado)
+- [x] **Cedente por documento (CNPJ)** — recebíveis identificam o cedente pelo documento, não por ID interno
+- [x] **Observabilidade** — traces no Jaeger (OTel), métricas no Prometheus e dashboards provisionados no Grafana
 - [ ] Séries temporais e distribuição por cedente nos gráficos; exportação CSV/PDF do extrato
 
 ---

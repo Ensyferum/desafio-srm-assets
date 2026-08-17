@@ -20,7 +20,7 @@ class SettlementProjectionConsumerTest {
                 new SettlementEvent(
                         UUID.randomUUID(),
                         UUID.randomUUID(),
-                        UUID.randomUUID(),
+                        "11222333000181",
                         new BigDecimal("100000.00"),
                         new BigDecimal("94232.23"),
                         new BigDecimal("5767.77"),

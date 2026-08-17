@@ -29,8 +29,9 @@ public class Receivable {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "cedente_id", nullable = false)
-    private UUID cedenteId;
+    /** CNPJ do cedente — identifica o cedente pelo documento, não por ID interno. */
+    @Column(name = "cedente_document", nullable = false, length = 14)
+    private String cedenteDocument;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "type_id", nullable = false)
@@ -62,12 +63,12 @@ public class Receivable {
     protected Receivable() {}
 
     public Receivable(
-            UUID cedenteId,
+            String cedenteDocument,
             ReceivableType type,
             BigDecimal faceValue,
             LocalDate dueDate,
             String currency) {
-        this.cedenteId = cedenteId;
+        this.cedenteDocument = cedenteDocument;
         this.type = type;
         this.faceValue = faceValue;
         this.dueDate = dueDate;
@@ -78,8 +79,8 @@ public class Receivable {
         return id;
     }
 
-    public UUID getCedenteId() {
-        return cedenteId;
+    public String getCedenteDocument() {
+        return cedenteDocument;
     }
 
     public ReceivableType getType() {

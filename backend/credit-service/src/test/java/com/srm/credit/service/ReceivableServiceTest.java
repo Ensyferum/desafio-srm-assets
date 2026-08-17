@@ -66,13 +66,13 @@ class ReceivableServiceTest {
                         new CreateReceivablesBatchRequest(
                                 List.of(
                                         new CreateReceivableRequest(
-                                                UUID.randomUUID(),
+                                                "11222333000181",
                                                 typeId,
                                                 new BigDecimal("10000.00"),
                                                 LocalDate.now().plusDays(30),
                                                 "BRL"),
                                         new CreateReceivableRequest(
-                                                UUID.randomUUID(),
+                                                "11222333000181",
                                                 typeId,
                                                 new BigDecimal("20000.00"),
                                                 LocalDate.now().plusDays(60),
@@ -93,7 +93,7 @@ class ReceivableServiceTest {
                                         new CreateReceivablesBatchRequest(
                                                 List.of(
                                                         new CreateReceivableRequest(
-                                                                UUID.randomUUID(),
+                                                                "11222333000181",
                                                                 typeId,
                                                                 new BigDecimal("100.00"),
                                                                 LocalDate.now().plusDays(30),
@@ -109,7 +109,7 @@ class ReceivableServiceTest {
                 new ReceivableType("Duplicata Mercantil", new BigDecimal("0.015"), "Título");
         Receivable receivable =
                 new Receivable(
-                        UUID.randomUUID(),
+                        "11222333000181",
                         type,
                         new BigDecimal("100.00"),
                         LocalDate.now().plusDays(30),
@@ -117,6 +117,8 @@ class ReceivableServiceTest {
         when(receivableRepository.findById(receivable.getId())).thenReturn(Optional.of(receivable));
 
         assertThat(service.findById(receivable.getId()).faceValue()).isEqualByComparingTo("100.00");
+        assertThat(service.findById(receivable.getId()).cedenteDocument())
+                .isEqualTo("11222333000181");
     }
 
     @Test
@@ -135,7 +137,7 @@ class ReceivableServiceTest {
                 new ReceivableType("Duplicata Mercantil", new BigDecimal("0.015"), "Título");
         Receivable receivable =
                 new Receivable(
-                        UUID.randomUUID(),
+                        "11222333000181",
                         type,
                         new BigDecimal("100.00"),
                         LocalDate.now().plusDays(30),
@@ -163,8 +165,7 @@ class ReceivableServiceTest {
         when(receivableRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
 
-        UUID cedenteId = UUID.randomUUID();
-        service.list("PENDING", "BRL", cedenteId, PageRequest.of(0, 20));
+        service.list("PENDING", "BRL", "11222333000181", PageRequest.of(0, 20));
 
         ArgumentCaptor<Specification<Receivable>> captor =
                 ArgumentCaptor.forClass(Specification.class);
@@ -173,7 +174,7 @@ class ReceivableServiceTest {
 
         verify(cb).equal(root.get("status"), ReceivableStatus.PENDING);
         verify(cb).equal(root.get("currency"), "BRL");
-        verify(cb).equal(root.get("cedenteId"), cedenteId);
+        verify(cb).equal(root.get("cedenteDocument"), "11222333000181");
     }
 
     @Test

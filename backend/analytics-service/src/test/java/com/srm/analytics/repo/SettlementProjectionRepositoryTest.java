@@ -25,7 +25,7 @@ class SettlementProjectionRepositoryTest {
         return new SettlementEvent(
                 UUID.randomUUID(),
                 UUID.randomUUID(),
-                UUID.randomUUID(),
+                "11222333000181",
                 new BigDecimal("100000.00"),
                 new BigDecimal("94232.23"),
                 new BigDecimal("5767.77"),
@@ -49,7 +49,7 @@ class SettlementProjectionRepositoryTest {
                         anyString(),
                         eq(event.transactionId()),
                         eq(event.receivableId()),
-                        eq(event.cedenteId()),
+                        eq(event.cedenteDocument()),
                         eq(event.faceValue()),
                         eq(event.presentValue()),
                         eq(event.discountValue()),
@@ -81,7 +81,7 @@ class SettlementProjectionRepositoryTest {
                 new SettlementEvent(
                         base.transactionId(),
                         base.receivableId(),
-                        base.cedenteId(),
+                        base.cedenteDocument(),
                         base.faceValue(),
                         base.presentValue(),
                         base.discountValue(),

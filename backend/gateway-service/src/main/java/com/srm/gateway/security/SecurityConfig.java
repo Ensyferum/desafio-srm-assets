@@ -33,6 +33,8 @@ public class SecurityConfig {
                                         .permitAll()
                                         .pathMatchers("/actuator/health", "/actuator/health/**")
                                         .permitAll()
+                                        .pathMatchers("/actuator/prometheus", "/actuator/metrics")
+                                        .permitAll()
                                         .pathMatchers(HttpMethod.POST, "/api/v1/auth/users/**")
                                         .hasRole("ADMIN")
                                         .pathMatchers(HttpMethod.POST, "/api/v1/exchange-rates/**")

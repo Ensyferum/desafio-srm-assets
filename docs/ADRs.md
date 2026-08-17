@@ -91,5 +91,6 @@ Decisões de arquitetura do **SRM Credit Engine**, no formato ADR (Status · Con
 | `RestClient.Builder` | `spring-boot-restclient` (traz `http-client` + `http-converter`) |
 | JSON serialização | Jackson 3 (`tools.jackson.databind`) — padrão do Boot 4; código migrado de `com.fasterxml.jackson` |
 | Gateway routes | Prefixo SCG 5: `spring.cloud.gateway.server.webflux.routes` (antes `spring.cloud.gateway.routes`) |
+| **Tracing OTel nativo** | `spring-boot-micrometer-tracing-opentelemetry` **não traz** o bridge nem o exporter — é preciso declarar `micrometer-tracing-bridge-otel` (sem ele o `OpenTelemetryTracingAutoConfiguration` não roda) e `opentelemetry-exporter-otlp` (sem ele nenhum span é exportado); além disso, o auto-config só roda com `management.opentelemetry.enabled=true` explícito (não há `matchIfMissing`) e o endpoint OTLP é `management.otlp.tracing.endpoint` (HTTP `:4318`). **Javaagent OTel é incompatível com Boot 4.1/Tomcat 11** (respostas HTTP penduradas) — usar o tracing nativo do Micrometer. |
 
 **Consequências:** + Compatibilidade correta com o ecossistema Boot 4; conhecimento registrado para o time. − Dependências explícitas a mais nos POMs; qualquer upgrade major futuro exige a mesma abordagem de verificação empírica (inspeção de jars/bytecode), nunca suposição.

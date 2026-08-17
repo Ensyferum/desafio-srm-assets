@@ -33,7 +33,7 @@ class TransactionControllerTest {
                 new TransactionSummary(
                         UUID.randomUUID(),
                         UUID.randomUUID(),
-                        UUID.randomUUID(),
+                        "11222333000181",
                         new BigDecimal("100000.00"),
                         new BigDecimal("94232.23"),
                         new BigDecimal("5767.77"),
@@ -50,6 +50,7 @@ class TransactionControllerTest {
                         get("/api/v1/transactions")
                                 .param("startDate", "2026-08-01")
                                 .param("endDate", "2026-08-31")
+                                .param("cedenteDocument", "11222333000181")
                                 .param("currency", "USD")
                                 .param("page", "0")
                                 .param("size", "20")

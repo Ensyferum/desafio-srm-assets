@@ -2,7 +2,6 @@ package com.srm.credit.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -111,7 +110,7 @@ class ReceivableControllerTest {
         ReceivableResponse receivable =
                 new ReceivableResponse(
                         UUID.fromString("11111111-1111-1111-1111-111111111111"),
-                        UUID.fromString("22222222-2222-2222-2222-222222222222"),
+                        "11222333000181",
                         UUID.fromString("33333333-3333-3333-3333-333333333333"),
                         "Duplicata Mercantil",
                         new BigDecimal("10000.00"),
@@ -119,16 +118,18 @@ class ReceivableControllerTest {
                         "BRL",
                         "PENDING",
                         0L);
-        when(receivableService.list(eq("PENDING"), eq("BRL"), isNull(), any(Pageable.class)))
+        when(receivableService.list(
+                        eq("PENDING"), eq("BRL"), eq("11222333000181"), any(Pageable.class)))
                 .thenReturn(PageResponse.of(List.of(receivable), PageRequest.of(0, 20), 1));
 
         mockMvc.perform(
                         get("/api/v1/receivables")
                                 .param("status", "PENDING")
-                                .param("currency", "BRL"))
+                                .param("currency", "BRL")
+                                .param("cedenteDocument", "11222333000181"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].status").value("PENDING"))
-                .andExpect(jsonPath("$.content[0].currency").value("BRL"))
+                .andExpect(jsonPath("$.content[0].cedenteDocument").value("11222333000181"))
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
 

@@ -76,7 +76,8 @@ export type ReceivableStatus = 'PENDING' | 'PRICED' | 'SETTLED' | 'CANCELLED';
 
 export interface ReceivableResponse {
   id: string;
-  cedenteId: string;
+  /** CNPJ do cedente (14 dígitos). */
+  cedenteDocument: string;
   receivableTypeId: string;
   receivableTypeName: string;
   faceValue: number;
@@ -87,7 +88,7 @@ export interface ReceivableResponse {
 }
 
 export interface CreateReceivableRequest {
-  cedenteId: string;
+  cedenteDocument: string;
   receivableTypeId: string;
   faceValue: number;
   dueDate: string;
@@ -124,7 +125,8 @@ export type TransactionStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'REVERSED';
 export interface TransactionSummary {
   transactionId: string;
   receivableId: string;
-  cedenteId: string;
+  /** CNPJ do cedente (14 dígitos). */
+  cedenteDocument: string;
   faceValue: number;
   presentValue: number;
   discountValue: number;

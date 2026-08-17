@@ -30,13 +30,12 @@ class SettlementAnalyticsRepositoryTest {
     void rowMapperMapsAllColumns() throws Exception {
         UUID txId = UUID.randomUUID();
         UUID recId = UUID.randomUUID();
-        UUID cedente = UUID.randomUUID();
         OffsetDateTime settledAt = OffsetDateTime.of(2026, 8, 12, 22, 30, 0, 0, ZoneOffset.UTC);
 
         ResultSet rs = mock(ResultSet.class);
         when(rs.getObject("transaction_id", UUID.class)).thenReturn(txId);
         when(rs.getObject("receivable_id", UUID.class)).thenReturn(recId);
-        when(rs.getObject("cedente_id", UUID.class)).thenReturn(cedente);
+        when(rs.getString("cedente_document")).thenReturn("11222333000181");
         when(rs.getBigDecimal("face_value")).thenReturn(new BigDecimal("100000.00"));
         when(rs.getBigDecimal("present_value")).thenReturn(new BigDecimal("94232.23"));
         when(rs.getBigDecimal("discount_value")).thenReturn(new BigDecimal("5767.77"));
@@ -50,7 +49,7 @@ class SettlementAnalyticsRepositoryTest {
                 SettlementAnalyticsRepository.TRANSACTION_ROW_MAPPER.mapRow(rs, 0);
 
         assertThat(summary.transactionId()).isEqualTo(txId);
-        assertThat(summary.cedenteId()).isEqualTo(cedente);
+        assertThat(summary.cedenteDocument()).isEqualTo("11222333000181");
         assertThat(summary.presentValue()).isEqualByComparingTo("94232.23");
         assertThat(summary.settlementCurrency()).isEqualTo("USD");
         assertThat(summary.settledAt()).isEqualTo(settledAt.toInstant());

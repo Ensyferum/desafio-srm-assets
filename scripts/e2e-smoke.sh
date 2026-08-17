@@ -93,9 +93,9 @@ check "Valor presente ≈ 94.232,23 (obtido: $PV)" \
 
 # ---------- 5. Criação de recebível em lote (RF02) ----------
 echo "5) Registro de lote de recebíveis..."
-CEDENTE="11111111-1111-1111-1111-111111111111"
+CEDENTE_CNPJ="11222333000181"
 BATCH="$(req POST /api/v1/receivables \
-  "{\"receivables\":[{\"cedenteId\":\"$CEDENTE\",\"receivableTypeId\":\"$TYPE_ID\",\"faceValue\":100000,\"dueDate\":\"$DUE_DATE\",\"currency\":\"BRL\"}]}")"
+  "{\"receivables\":[{\"cedenteDocument\":\"$CEDENTE_CNPJ\",\"receivableTypeId\":\"$TYPE_ID\",\"faceValue\":100000,\"dueDate\":\"$DUE_DATE\",\"currency\":\"BRL\"}]}")"
 RECEIVABLE_ID="$(printf '%s' "$BATCH" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p' | head -1)"
 check "Recebível criado (id=$RECEIVABLE_ID)" "$([ -n "$RECEIVABLE_ID" ] && echo true || echo false)"
 
@@ -111,7 +111,7 @@ check "Transação COMPLETED (id=$TXN_ID, status=$TXN_STATUS)" \
 # ---------- 7. Liquidação cross-currency (USD → BRL, RF04) ----------
 echo "7) Recebível USD liquidado em BRL (conversão via currency-service)..."
 BATCH_USD="$(req POST /api/v1/receivables \
-  "{\"receivables\":[{\"cedenteId\":\"$CEDENTE\",\"receivableTypeId\":\"$TYPE_ID\",\"faceValue\":50000,\"dueDate\":\"$DUE_DATE\",\"currency\":\"USD\"}]}")"
+  "{\"receivables\":[{\"cedenteDocument\":\"$CEDENTE_CNPJ\",\"receivableTypeId\":\"$TYPE_ID\",\"faceValue\":50000,\"dueDate\":\"$DUE_DATE\",\"currency\":\"USD\"}]}")"
 RECEIVABLE_USD="$(printf '%s' "$BATCH_USD" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p' | head -1)"
 SETTLE_USD="$(req POST "/api/v1/receivables/$RECEIVABLE_USD/settle" \
   "{\"settlementCurrency\":\"BRL\"}")"

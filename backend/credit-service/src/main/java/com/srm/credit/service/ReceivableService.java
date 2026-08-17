@@ -64,10 +64,19 @@ public class ReceivableService {
                                                         + item.receivableTypeId()));
         Receivable receivable =
                 new Receivable(
-                        item.cedenteId(), type, item.faceValue(), item.dueDate(), item.currency());
+                        item.cedenteDocument(),
+                        type,
+                        item.faceValue(),
+                        item.dueDate(),
+                        item.currency());
         return receivableRepository.save(receivable);
     }
 
+    /**
+     * {@code readOnly} garante a sessão aberta durante o mapeamento da relação LAZY {@code type} —
+     * sem isso o {@code ReceivableResponse.from} lança LazyInitializationException.
+     */
+    @Transactional(readOnly = true)
     public ReceivableResponse findById(UUID id) {
         Receivable receivable =
                 receivableRepository
@@ -82,8 +91,8 @@ public class ReceivableService {
 
     @Transactional(readOnly = true)
     public PageResponse<ReceivableResponse> list(
-            String status, String currency, UUID cedenteId, Pageable pageable) {
-        Specification<Receivable> spec = buildFilter(status, currency, cedenteId);
+            String status, String currency, String cedenteDocument, Pageable pageable) {
+        Specification<Receivable> spec = buildFilter(status, currency, cedenteDocument);
         Page<Receivable> page = receivableRepository.findAll(spec, pageable);
         return PageResponse.of(
                 page.getContent().stream().map(ReceivableResponse::from).toList(),
@@ -91,7 +100,8 @@ public class ReceivableService {
                 page.getTotalElements());
     }
 
-    private Specification<Receivable> buildFilter(String status, String currency, UUID cedenteId) {
+    private Specification<Receivable> buildFilter(
+            String status, String currency, String cedenteDocument) {
         ReceivableStatus statusFilter = null;
         if (status != null && !status.isBlank()) {
             try {
@@ -109,8 +119,8 @@ public class ReceivableService {
             if (currency != null && !currency.isBlank()) {
                 predicates.add(cb.equal(root.get("currency"), currency));
             }
-            if (cedenteId != null) {
-                predicates.add(cb.equal(root.get("cedenteId"), cedenteId));
+            if (cedenteDocument != null && !cedenteDocument.isBlank()) {
+                predicates.add(cb.equal(root.get("cedenteDocument"), cedenteDocument));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };

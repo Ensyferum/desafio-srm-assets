@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.srm.analytics.repo.SettlementQueryBuilder.SqlQuery;
 import java.time.LocalDate;
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageRequest;
 
@@ -37,22 +36,25 @@ class SettlementQueryBuilderTest {
 
     @Test
     void addsCedenteAndCurrencyFilters() {
-        UUID cedente = UUID.randomUUID();
         SqlQuery query =
-                SettlementQueryBuilder.select(START, null, cedente, "USD", PageRequest.of(0, 20));
+                SettlementQueryBuilder.select(
+                        START, null, "11222333000181", "USD", PageRequest.of(0, 20));
 
-        assertThat(query.sql()).contains("p.cedente_id = ?");
+        assertThat(query.sql()).contains("p.cedente_document = ?");
         assertThat(query.sql()).contains("p.settlement_currency = ?");
-        assertThat(query.args()).contains(cedente, "USD");
+        assertThat(query.args()).contains("11222333000181", "USD");
     }
 
     @Test
     void countQueryReusesSameFilters() {
-        UUID cedente = UUID.randomUUID();
-        SqlQuery count = SettlementQueryBuilder.count(START, END, cedente, "BRL");
+        SqlQuery count = SettlementQueryBuilder.count(START, END, "11222333000181", "BRL");
 
         assertThat(count.sql()).startsWith("SELECT COUNT(*)");
         assertThat(count.args())
-                .contains(START.atStartOfDay(), END.plusDays(1).atStartOfDay(), cedente, "BRL");
+                .contains(
+                        START.atStartOfDay(),
+                        END.plusDays(1).atStartOfDay(),
+                        "11222333000181",
+                        "BRL");
     }
 }

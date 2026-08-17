@@ -8,7 +8,7 @@ import java.util.UUID;
 /** Representação pública de um recebível. */
 public record ReceivableResponse(
         UUID id,
-        UUID cedenteId,
+        String cedenteDocument,
         UUID receivableTypeId,
         String receivableTypeName,
         BigDecimal faceValue,
@@ -20,7 +20,7 @@ public record ReceivableResponse(
     public static ReceivableResponse from(Receivable receivable) {
         return new ReceivableResponse(
                 receivable.getId(),
-                receivable.getCedenteId(),
+                receivable.getCedenteDocument(),
                 receivable.getType().getId(),
                 receivable.getType().getName(),
                 receivable.getFaceValue(),
