@@ -1,3 +1,4 @@
 com.srm.common.autoconfigure.CorrelationIdAutoConfiguration
 com.srm.common.autoconfigure.ErrorHandlingAutoConfiguration
 com.srm.common.autoconfigure.MetricsAutoConfiguration
+com.srm.common.autoconfigure.OpenApiGatewayServerAutoConfiguration

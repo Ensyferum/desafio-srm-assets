@@ -1,10 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { CheckCircle2, Filter, Inbox } from 'lucide-react';
-import { Button, Field, Select } from '../../components/Field';
+import { useNavigate } from 'react-router-dom';
+import { CheckCircle2, Filter, Inbox, ListOrdered } from 'lucide-react';
+import { Button, Field, Select, TextInput } from '../../components/Field';
 import { Card } from '../../components/Card';
 import { ErrorAlert } from '../../components/ErrorAlert';
 import { Money } from '../../components/Money';
-import { Spinner } from '../../components/Spinner';
 import { Badge } from '../../components/Badge';
 import { Pagination } from '../../components/Pagination';
 import { api } from '../../lib/api';
@@ -23,13 +23,17 @@ interface ReceivablesListTabProps {
 export function ReceivablesListTab({ onSettle }: ReceivablesListTabProps) {
   const [status, setStatus] = useState('');
   const [currency, setCurrency] = useState('');
-  const [applied, setApplied] = useState({ status: '', currency: '' });
+  const [cedenteDocument, setCedenteDocument] = useState('');
+  const [applied, setApplied] = useState({ status: '', currency: '', cedenteDocument: '' });
   const [page, setPage] = useState(0);
+  const navigate = useNavigate();
+  const hasActiveFilters = Boolean(applied.status || applied.currency || applied.cedenteDocument);
 
   const buildUrl = () => {
     const params = new URLSearchParams({ page: String(page), size: String(PAGE_SIZE), sort: 'createdAt,desc' });
     if (applied.status) params.set('status', applied.status);
     if (applied.currency) params.set('currency', applied.currency);
+    if (applied.cedenteDocument) params.set('cedenteDocument', applied.cedenteDocument);
     return `/receivables?${params.toString()}`;
   };
 
@@ -41,7 +45,7 @@ export function ReceivablesListTab({ onSettle }: ReceivablesListTabProps) {
 
   function handleApply(event: FormEvent) {
     event.preventDefault();
-    setApplied({ status, currency });
+    setApplied({ status, currency, cedenteDocument });
     setPage(0);
   }
 
@@ -73,6 +77,16 @@ export function ReceivablesListTab({ onSettle }: ReceivablesListTabProps) {
               <option value="USD">USD</option>
             </Select>
           </Field>
+          <Field label="CNPJ do cedente" hint="Somente os 14 dígitos">
+            <TextInput
+              value={cedenteDocument}
+              onChange={(e) => setCedenteDocument(e.target.value.replace(/\D/g, ''))}
+              placeholder="11222333000181"
+              maxLength={14}
+              inputMode="numeric"
+              className="font-mono text-xs"
+            />
+          </Field>
           <div className="flex items-end">
             <Button type="submit" className="w-full">
               <Filter className="h-4 w-4" />
@@ -89,11 +103,38 @@ export function ReceivablesListTab({ onSettle }: ReceivablesListTabProps) {
       )}
 
       {result.loading ? (
-        <Spinner label="Carregando…" />
+        <div className="space-y-3 p-5" aria-busy="true">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-11 animate-pulse rounded-lg bg-slate-800/50" />
+          ))}
+        </div>
       ) : !data || data.empty ? (
-        <div className="flex flex-col items-center gap-2 py-12 text-center text-slate-500">
+        <div className="flex flex-col items-center gap-3 py-12 text-center text-slate-500">
           <Inbox className="h-8 w-8 text-slate-600" />
-          <p className="text-sm">Nenhum recebível encontrado para os filtros selecionados.</p>
+          <p className="text-sm">
+            {hasActiveFilters
+              ? 'Nenhum recebível encontrado para os filtros selecionados.'
+              : 'Nenhum recebível registrado ainda.'}
+          </p>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setStatus('');
+                setCurrency('');
+                setCedenteDocument('');
+                setApplied({ status: '', currency: '', cedenteDocument: '' });
+              }}
+            >
+              Limpar filtros
+            </Button>
+          ) : (
+            <Button type="button" onClick={() => navigate('/recebiveis?tab=registrar')}>
+              <ListOrdered className="h-4 w-4" />
+              Registrar primeiro lote
+            </Button>
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto">

@@ -27,6 +27,38 @@ spring:
               predicates:
                 - Path=/api/v1/transactions/**,/api/v1/analytics/**
 
+            # Swagger/OpenAPI agregado (RF04): cada serviço expõe /v3/api-docs e a UI
+            # em /swagger/{serviço}/... — o gateway reescreve o prefixo e repassa.
+            # O redirect do springdoc (/swagger-ui.html → /swagger-ui/index.html) é
+            # reescrito para manter o prefixo pelo SwaggerLocationRewriteFilter (Java).
+            - id: auth-service-swagger
+              uri: ${AUTH_SERVICE_URI:http://auth-service:8080}
+              predicates:
+                - Path=/swagger/auth-service/**
+              filters:
+                - RewritePath=/swagger/auth-service/(?<segment>.*), /${segment}
+
+            - id: currency-service-swagger
+              uri: ${CURRENCY_SERVICE_URI:http://currency-service:8080}
+              predicates:
+                - Path=/swagger/currency-service/**
+              filters:
+                - RewritePath=/swagger/currency-service/(?<segment>.*), /${segment}
+
+            - id: credit-service-swagger
+              uri: ${CREDIT_SERVICE_URI:http://credit-service:8080}
+              predicates:
+                - Path=/swagger/credit-service/**
+              filters:
+                - RewritePath=/swagger/credit-service/(?<segment>.*), /${segment}
+
+            - id: analytics-service-swagger
+              uri: ${ANALYTICS_SERVICE_URI:http://analytics-service:8080}
+              predicates:
+                - Path=/swagger/analytics-service/**
+              filters:
+                - RewritePath=/swagger/analytics-service/(?<segment>.*), /${segment}
+
           globalcors:
             cors-configurations:
               '[/**]':

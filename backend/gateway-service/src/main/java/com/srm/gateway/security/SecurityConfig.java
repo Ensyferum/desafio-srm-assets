@@ -35,6 +35,11 @@ public class SecurityConfig {
                                         .permitAll()
                                         .pathMatchers("/actuator/prometheus", "/actuator/metrics")
                                         .permitAll()
+                                        // Documentação OpenAPI agregada (RF04): UI + spec expostos
+                                        // via gateway
+                                        .pathMatchers(
+                                                "/swagger/**", "/swagger-ui/**", "/v3/api-docs/**")
+                                        .permitAll()
                                         .pathMatchers(HttpMethod.POST, "/api/v1/auth/users/**")
                                         .hasRole("ADMIN")
                                         .pathMatchers(HttpMethod.POST, "/api/v1/exchange-rates/**")

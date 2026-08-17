@@ -1,0 +1,28 @@
+# ConfigMap com configuração não-secreta compartilhada pelos serviços.
+# Segredos (senha do banco, JWT_SECRET) vivem em k8s/secret.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: srm-common-config
+  namespace: srm-credit-engine
+data:
+  # Banco PostgreSQL (serviço kubernetes "postgres")
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/srm_credit_engine
+  SPRING_DATASOURCE_USERNAME: srm_user
+
+  # Mensageria Kafka (KRaft single-node, mesmo padrão do docker-compose)
+  KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+
+  # Redis (cache de taxas — RNF04)
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+
+  # Tracing nativo via Micrometer/OTel → coletor OTel do cluster
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_JAVAAGENT_ENABLED: "false"
+
+  # Service URLs internos
+  AUTH_SERVICE_URI: http://auth-service:8080
+  CURRENCY_SERVICE_URI: http://currency-service:8080
+  CREDIT_SERVICE_URI: http://credit-service:8080
+  ANALYTICS_SERVICE_URI: http://analytics-service:8080

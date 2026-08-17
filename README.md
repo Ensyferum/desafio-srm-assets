@@ -235,6 +235,15 @@ Todas as rotas passam pelo **gateway (`:8080`)** e exigem `Authorization: Bearer
 | GET | `/api/v1/transactions` | analytics | **Extrato** de liquidações (CQRS) — RF05 (filtros `startDate`/`endDate`/`cedenteDocument`/`currency`) |
 | GET | `/api/v1/analytics/summary` | analytics | Resumo diário (dashboard) |
 
+**Documentação OpenAPI (Swagger) agregada pelo gateway (RF04):**
+
+| Serviço | Swagger UI | Spec JSON |
+|---|---|---|
+| auth | http://localhost:8080/swagger/auth-service/swagger-ui.html | `/swagger/auth-service/v3/api-docs` |
+| currency | http://localhost:8080/swagger/currency-service/swagger-ui.html | `/swagger/currency-service/v3/api-docs` |
+| credit | http://localhost:8080/swagger/credit-service/swagger-ui.html | `/swagger/credit-service/v3/api-docs` |
+| analytics | http://localhost:8080/swagger/analytics-service/swagger-ui.html | `/swagger/analytics-service/v3/api-docs` |
+
 ### Exemplos
 
 ```bash
@@ -341,7 +350,7 @@ Resultado atual (14/08/2026):
 | srm-common | ✅ | 83,0% |
 | auth-service | ✅ | 91,0% |
 | currency-service | ✅ | 84,9% |
-| credit-service | ✅ | 85,7% |
+| credit-service | ✅ | 89,1% |
 | analytics-service | ✅ | 97,7% |
 
 ### CI (GitHub Actions — `.github/workflows/ci.yml`)
@@ -380,6 +389,30 @@ git commit -m "feat(credit): adiciona liquidação ACID com optimistic locking"
 
 ---
 
+## 🧪 Load test (k6 — RNF04)
+
+```bash
+# Smoke (sanidade, 1 VU)
+docker compose --profile loadtest run --rm k6
+
+# Carga (ramp-up 0→50→100→0 VUs, ~20 ops/s por VU)
+docker compose --profile loadtest run --rm k6 k6 run /scripts/load.js
+```
+
+Objetivo: **1000+ req/s** agregado com p95 < 500ms (thresholds no script). Ver [load-test/README.md](load-test/README.md) para interpretação dos resultados e limites do ambiente dev.
+
+## ☸️ Kubernetes (Seção 9.2)
+
+Manifests de produção em [`k8s/`](k8s/): namespace, ConfigMap, Secrets, infra (Postgres/Redis/Kafka), deployments dos 5 serviços + frontend com probes de liveness/readiness, Services e Ingress. Aplicar com:
+
+```bash
+kubectl apply -k k8s/
+```
+
+Ver [k8s/README.md](k8s/README.md). O **docker-compose** continua sendo o ambiente padrão de desenvolvimento.
+
+---
+
 ## 🚀 Design para alta escala (1M transações/min)
 
 Evolução incremental a partir desta base (detalhes nos ADRs e na spec):
@@ -402,7 +435,12 @@ Evolução incremental a partir desta base (detalhes nos ADRs e na spec):
 - [x] **Frontend React** — painel do operador (login, dashboard com KPIs e gráfico temporável barras/linhas/donut, simulação em tempo real, lista de recebíveis com filtros + lote + liquidação, taxas FX e extrato paginado)
 - [x] **Cedente por documento (CNPJ)** — recebíveis identificam o cedente pelo documento, não por ID interno
 - [x] **Observabilidade** — traces no Jaeger (OTel), métricas no Prometheus e dashboards provisionados no Grafana
-- [ ] Séries temporais e distribuição por cedente nos gráficos; exportação CSV/PDF do extrato
+- [x] **Resiliência (RNF01)** — retry + circuit breaker (Resilience4j) + fallback para última taxa conhecida na chamada credit→currency (verificado em produção: liquidação completou com o currency-service derrubado)
+- [x] **Load test (RNF04)** — scripts k6 (smoke + carga) via `docker compose --profile loadtest` (ver `load-test/README.md`)
+- [x] **Swagger agregado (RF04)** — UI e spec de todos os serviços via gateway (`/swagger/{serviço}/swagger-ui.html`)
+- [x] **Kubernetes (Seção 9.2)** — manifests completos em `k8s/` (namespace, config, secrets, infra, deployments com probes, services, ingress)
+- [x] **UX operacional** — toasts de feedback, filtro por CNPJ no extrato/lista, exportação CSV, auto-refresh no dashboard, abas com deep-link
+- [ ] Séries temporais e distribuição por cedente nos gráficos
 
 ---
 

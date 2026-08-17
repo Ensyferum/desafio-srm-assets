@@ -44,6 +44,9 @@ server:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+    # Agregação via gateway (RF04): a UI carrega o spec pelo caminho público /swagger/auth-service
+    url: /swagger/auth-service/v3/api-docs
+    # "Try it out" atinge o gateway: OpenApiGatewayServerAutoConfiguration força servers=[/]
 
 management:
   # Boot 4.1: a autoconfiguração de tracing OTel só roda com esta flag explícita

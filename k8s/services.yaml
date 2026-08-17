@@ -1,0 +1,72 @@
+# Services internos (ClusterIP) — a entrada externa é o gateway (frontend via Ingress).
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: srm-credit-engine
+spec:
+  selector:
+    app: auth-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+  namespace: srm-credit-engine
+spec:
+  selector:
+    app: gateway-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: currency-service
+  namespace: srm-credit-engine
+spec:
+  selector:
+    app: currency-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: credit-service
+  namespace: srm-credit-engine
+spec:
+  selector:
+    app: credit-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+  namespace: srm-credit-engine
+spec:
+  selector:
+    app: analytics-service
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: srm-credit-engine
+spec:
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80

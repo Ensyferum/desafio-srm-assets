@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { CheckCircle2, ListChecks, ListOrdered } from 'lucide-react';
 import { BatchTab } from './receivables/BatchTab';
 import { SettleTab } from './receivables/SettleTab';
@@ -12,14 +13,29 @@ const TABS: { id: Tab; label: string; Icon: typeof ListChecks }[] = [
   { id: 'liquidar', label: 'Liquidar', Icon: CheckCircle2 },
 ];
 
+const TAB_FROM_PARAM: Record<string, Tab | undefined> = {
+  lista: 'lista',
+  registrar: 'registrar',
+  liquidar: 'liquidar',
+};
+
 /** Recebíveis: lista paginada, registro em lote (RF02) e liquidação (RF03/RF04). */
 export function ReceivablesPage() {
-  const [tab, setTab] = useState<Tab>('lista');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const paramTab = TAB_FROM_PARAM[searchParams.get('tab') ?? ''];
+  const [localTab, setLocalTab] = useState<Tab>('lista');
+  // A URL é a fonte da verdade quando ?tab= existe; senão usa o estado local.
+  const tab: Tab = paramTab ?? localTab;
   const [pendingId, setPendingId] = useState('');
+
+  function handleTabChange(next: Tab) {
+    setLocalTab(next);
+    setSearchParams({ tab: next }, { replace: true });
+  }
 
   function handleSettleFromList(id: string) {
     setPendingId(id);
-    setTab('liquidar');
+    handleTabChange('liquidar');
   }
 
   return (
@@ -34,7 +50,7 @@ export function ReceivablesPage() {
           <button
             key={id}
             type="button"
-            onClick={() => setTab(id)}
+            onClick={() => handleTabChange(id)}
             className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
               tab === id
                 ? 'bg-brand-600 text-white shadow-sm shadow-brand-900/40'

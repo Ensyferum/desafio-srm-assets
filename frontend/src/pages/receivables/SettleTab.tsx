@@ -8,6 +8,7 @@ import { Spinner } from '../../components/Spinner';
 import { Badge } from '../../components/Badge';
 import { api, ApiError } from '../../lib/api';
 import { formatDate } from '../../lib/format';
+import { useToast } from '../../lib/toast';
 import type { ReceivableResponse, SettleResponse } from '../../lib/types';
 
 interface SettleTabProps {
@@ -25,6 +26,7 @@ export function SettleTab({ pendingId, onConsumed }: SettleTabProps) {
   const [settleError, setSettleError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [settling, setSettling] = useState(false);
+  const { push } = useToast();
 
   async function runSearch(id: string) {
     setFound(null);
@@ -68,8 +70,10 @@ export function SettleTab({ pendingId, onConsumed }: SettleTabProps) {
       });
       setSettleResult(response);
       setFound((f) => (f ? { ...f, status: 'SETTLED' } : f));
+      push('success', 'Liquidação concluída com sucesso.');
     } catch (err) {
       setSettleError(err instanceof ApiError ? err.message : 'Erro ao liquidar.');
+      push('error', err instanceof ApiError ? err.message : 'Erro ao liquidar.');
     } finally {
       setSettling(false);
     }

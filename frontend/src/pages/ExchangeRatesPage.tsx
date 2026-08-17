@@ -7,6 +7,7 @@ import { Spinner } from '../components/Spinner';
 import { api, ApiError } from '../lib/api';
 import { useRole } from '../lib/useAuth';
 import { formatDate, formatNumber, todayISO } from '../lib/format';
+import { useToast } from '../lib/toast';
 import { useAsync } from '../lib/useAsync';
 import type { ExchangeRateResponse } from '../lib/types';
 
@@ -20,8 +21,8 @@ export function ExchangeRatesPage() {
   const [rate, setRate] = useState('');
   const [effectiveDate, setEffectiveDate] = useState(todayISO());
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const { push } = useToast();
 
   // Agrupa por par e ordena do mais recente ao mais antigo
   const grouped = useMemo(() => {
@@ -43,7 +44,6 @@ export function ExchangeRatesPage() {
       return;
     }
     setError(null);
-    setSuccess(null);
     setSaving(true);
     try {
       await api.post('/exchange-rates', {
@@ -52,12 +52,12 @@ export function ExchangeRatesPage() {
         rate: rateValue,
         effectiveDate,
       });
-      setSuccess(`Taxa ${from}→${to} registrada para ${formatDate(effectiveDate)}.`);
+      push('success', `Taxa ${from}→${to} registrada para ${formatDate(effectiveDate)}.`);
       setRate('');
       void rates.reload();
     } catch (err) {
-      setSuccess(null);
       setError(err instanceof ApiError ? err.message : 'Erro ao registrar taxa.');
+      push('error', err instanceof ApiError ? err.message : 'Erro ao registrar taxa.');
     } finally {
       setSaving(false);
     }
@@ -134,11 +134,6 @@ export function ExchangeRatesPage() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && <ErrorAlert message={error} />}
-              {success && (
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-                  {success}
-                </div>
-              )}
               <div className="grid grid-cols-2 gap-4">
                 <Field label="De" required>
                   <Select value={from} onChange={(e) => setFrom(e.target.value)}>

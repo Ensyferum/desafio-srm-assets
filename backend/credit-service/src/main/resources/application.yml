@@ -33,7 +33,29 @@ spring:
 app:
   fx:
     service-url: ${CURRENCY_SERVICE_URI:http://currency-service:8080}
-    max-attempts: ${FX_MAX_ATTEMPTS:3}
+
+# Resiliência da chamada externa ao currency-service (RNF01):
+# retry com backoff, circuit breaker e fallback para a última taxa conhecida.
+resilience4j:
+  circuitbreaker:
+    instances:
+      fxRate:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        # Erros de negócio (ex.: par inexistente) não contam como falha do circuito
+        ignore-exceptions:
+          - com.srm.common.error.BusinessException
+  retry:
+    instances:
+      fxRate:
+        max-attempts: 3
+        wait-duration: 300ms
+        retry-exceptions:
+          - org.springframework.web.client.RestClientException
+        ignore-exceptions:
+          - com.srm.common.error.BusinessException
 
 server:
   port: ${PORT:8080}
@@ -41,6 +63,9 @@ server:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+    # Agregação via gateway (RF04): a UI carrega o spec pelo caminho público /swagger/credit-service
+    url: /swagger/credit-service/v3/api-docs
+    # "Try it out" atinge o gateway: OpenApiGatewayServerAutoConfiguration força servers=[/]
 
 management:
   # Boot 4.1: a autoconfiguração de tracing OTel só roda com esta flag explícita

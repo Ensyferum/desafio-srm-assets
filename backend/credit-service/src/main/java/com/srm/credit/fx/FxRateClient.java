@@ -14,11 +14,11 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 
 /**
- * Cliente resiliente do currency-service (RNF01): retry com backoff simples em falhas transitórias
- * e fallback para o par de moedas invertido.
+ * Cliente HTTP do currency-service (RNF01) — uma tentativa por chamada. A resiliência (retry com
+ * backoff, circuit breaker e fallback para a última taxa conhecida) é aplicada pelo {@link
+ * FxConversionService} via Resilience4j; este cliente é intencionalmente enxuto e testável.
  */
 @Component
 public class FxRateClient {
@@ -26,14 +26,11 @@ public class FxRateClient {
     private static final Logger log = LoggerFactory.getLogger(FxRateClient.class);
 
     private final RestClient restClient;
-    private final int maxAttempts;
 
     public FxRateClient(
             RestClient.Builder builder,
             CorrelationIdClientHttpRequestInterceptor correlationInterceptor,
-            @Value("${app.fx.service-url:http://currency-service:8080}") String baseUrl,
-            @Value("${app.fx.max-attempts:3}") int maxAttempts) {
-        this.maxAttempts = maxAttempts;
+            @Value("${app.fx.service-url:http://currency-service:8080}") String baseUrl) {
         RestClient.Builder prepared =
                 builder.baseUrl(baseUrl).requestInterceptor(correlationInterceptor);
         this.restClient = configure(prepared).build();
@@ -49,63 +46,45 @@ public class FxRateClient {
 
     /**
      * Busca a taxa do par {@code from→to}. Se o par não existir, tenta o par invertido e retorna
-     * {@code 1/rate}. Falhas transitórias usam retry.
+     * {@code 1/rate}. Erros transitórios (5xx, rede) propagam para o retry/circuit breaker do
+     * chamador.
      */
     public BigDecimal fetchRate(String from, String to, LocalDate date) {
         try {
             return fetchPair(from, to, date);
         } catch (HttpClientErrorException.NotFound notFound) {
             log.info("Par {}/{} não encontrado; tentando inversão de {}/{}", from, to, to, from);
-            BigDecimal inverse = fetchPair(to, from, date);
-            return BigDecimal.ONE.divide(inverse, 10, RoundingMode.HALF_EVEN);
+            try {
+                BigDecimal inverse = fetchPair(to, from, date);
+                return BigDecimal.ONE.divide(inverse, 10, RoundingMode.HALF_EVEN);
+            } catch (HttpClientErrorException.NotFound inverseNotFound) {
+                throw new BusinessException(
+                        HttpStatus.NOT_FOUND,
+                        "Nenhuma taxa de câmbio encontrada para o par "
+                                + from
+                                + "→"
+                                + to
+                                + " na data "
+                                + date);
+            }
         }
     }
 
     private BigDecimal fetchPair(String from, String to, LocalDate date) {
-        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-                ExchangeRateResponse response =
-                        restClient
-                                .get()
-                                .uri(
-                                        "/api/v1/exchange-rates?from={from}&to={to}&date={date}",
-                                        from,
-                                        to,
-                                        date)
-                                .retrieve()
-                                .body(ExchangeRateResponse.class);
-                if (response == null) {
-                    throw new BusinessException(
-                            HttpStatus.BAD_GATEWAY, "Resposta vazia do serviço de câmbio.");
-                }
-                return response.rate();
-            } catch (HttpClientErrorException.NotFound notFound) {
-                throw notFound;
-            } catch (RestClientException ex) {
-                if (attempt == maxAttempts) {
-                    log.error(
-                            "Falha ao consultar taxa {}/{} após {} tentativas: {}",
-                            from,
-                            to,
-                            maxAttempts,
-                            ex.getMessage());
-                    throw new BusinessException(
-                            HttpStatus.SERVICE_UNAVAILABLE,
-                            "Serviço de câmbio indisponível no momento. Tente novamente.");
-                }
-                sleepBackoff(attempt);
-            }
+        ExchangeRateResponse response =
+                restClient
+                        .get()
+                        .uri(
+                                "/api/v1/exchange-rates?from={from}&to={to}&date={date}",
+                                from,
+                                to,
+                                date)
+                        .retrieve()
+                        .body(ExchangeRateResponse.class);
+        if (response == null) {
+            throw new BusinessException(
+                    HttpStatus.BAD_GATEWAY, "Resposta vazia do serviço de câmbio.");
         }
-        throw new BusinessException(
-                HttpStatus.SERVICE_UNAVAILABLE, "Serviço de câmbio indisponível.");
-    }
-
-    private void sleepBackoff(int attempt) {
-        try {
-            Thread.sleep(200L * attempt);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new BusinessException(HttpStatus.SERVICE_UNAVAILABLE, "Operação interrompida.");
-        }
+        return response.rate();
     }
 }

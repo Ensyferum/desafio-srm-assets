@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { ListOrdered, Plus, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight, ListOrdered, Plus, Trash2 } from 'lucide-react';
 import { Button, Field, Select, TextInput } from '../../components/Field';
 import { Card } from '../../components/Card';
 import { ErrorAlert } from '../../components/ErrorAlert';
@@ -7,6 +8,7 @@ import { Money } from '../../components/Money';
 import { Badge } from '../../components/Badge';
 import { api, ApiError } from '../../lib/api';
 import { addDaysISO, formatRate } from '../../lib/format';
+import { useToast } from '../../lib/toast';
 import { useAsync } from '../../lib/useAsync';
 import type {
   CreateReceivablesBatchResponse,
@@ -38,6 +40,8 @@ export function BatchTab() {
   const [batchResult, setBatchResult] = useState<CreateReceivablesBatchResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const { push } = useToast();
+  const navigate = useNavigate();
 
   function updateItem(index: number, patch: Partial<BatchItem>) {
     setItems((list) => list.map((item, i) => (i === index ? { ...item, ...patch } : item)));
@@ -67,8 +71,10 @@ export function BatchTab() {
         })),
       });
       setBatchResult(response);
+      push('success', `${response.created} recebível(is) registrado(s) com sucesso.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao registrar lote.');
+      push('error', err instanceof ApiError ? err.message : 'Erro ao registrar lote.');
     } finally {
       setSaving(false);
     }
@@ -82,8 +88,16 @@ export function BatchTab() {
       <form onSubmit={handleCreateBatch} className="space-y-4">
         {error && <ErrorAlert message={error} />}
         {batchResult && (
-          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
             <p className="font-medium">{batchResult.created} recebível(is) criado(s) com sucesso.</p>
+            <button
+              type="button"
+              onClick={() => navigate('/recebiveis?tab=lista')}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/20 px-3 py-1.5 font-medium text-emerald-200 transition-colors hover:bg-emerald-500/30"
+            >
+              Ver na lista
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
           </div>
         )}
 

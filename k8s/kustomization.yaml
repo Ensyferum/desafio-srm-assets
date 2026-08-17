@@ -1,0 +1,15 @@
+# Aplica o ambiente completo com um único comando:
+#   kubectl apply -k k8s/
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: srm-credit-engine
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.example.yaml
+  - infra.yaml
+  - deployments.yaml
+  - services.yaml
+  - ingress.yaml

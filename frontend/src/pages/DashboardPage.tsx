@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -34,6 +34,9 @@ import { formatDate, formatMoney, formatMoneyCompact } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import type { AnalyticsSummaryResponse, PageResponse, TransactionSummary } from '../lib/types';
 
+/** Auto-refresh: atualiza o painel a cada N segundos (observação operacional). */
+const AUTO_REFRESH_MS = 30_000;
+
 const chartColors = ['#10b981', '#38bdf8', '#a78bfa', '#f59e0b'];
 
 const chartKinds = [
@@ -66,10 +69,22 @@ export function DashboardPage() {
     return entries.map(([currency, value]) => ({ currency, value }));
   }, [summary.data]);
 
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
   function reloadAll() {
     void summary.reload();
     void recent.reload();
+    setLastUpdated(new Date());
   }
+
+  // Auto-refresh operacional (30s) — desligável para conferência manual
+  useEffect(() => {
+    if (!autoRefresh) return undefined;
+    const timer = window.setInterval(reloadAll, AUTO_REFRESH_MS);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRefresh]);
 
   return (
     <div className="space-y-6">
@@ -78,14 +93,34 @@ export function DashboardPage() {
           <h1 className="text-xl font-bold tracking-tight text-slate-100">Dashboard</h1>
           <p className="text-sm text-slate-400">Visão geral das liquidações do período</p>
         </div>
-        <button
-          type="button"
-          onClick={reloadAll}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 transition-colors hover:border-slate-500 hover:text-slate-100"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Atualizar
-        </button>
+        <div className="flex items-center gap-2">
+          {lastUpdated && (
+            <span className="hidden text-xs text-slate-500 sm:inline">
+              Atualizado às {lastUpdated.toLocaleTimeString('pt-BR')}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setAutoRefresh((v) => !v)}
+            title={autoRefresh ? 'Auto-refresh ativado (30s)' : 'Auto-refresh desativado'}
+            className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+              autoRefresh
+                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                : 'border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200'
+            }`}
+          >
+            <RefreshCw className={`h-4 w-4 ${autoRefresh ? 'animate-spin [animation-duration:8s]' : ''}`} />
+            {autoRefresh ? 'Auto' : 'Manual'}
+          </button>
+          <button
+            type="button"
+            onClick={reloadAll}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 transition-colors hover:border-slate-500 hover:text-slate-100"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Atualizar
+          </button>
+        </div>
       </header>
 
       {summary.error && (

@@ -34,6 +34,7 @@
 
         <spring-cloud.version>2025.1.2</spring-cloud.version>
         <springdoc.version>3.1.0</springdoc.version>
+        <resilience4j.version>2.3.0</resilience4j.version>
         <jacoco.version>0.8.15</jacoco.version>
         <spotless.version>3.9.0</spotless.version>
         <google-java-format.version>1.28.0</google-java-format.version>
@@ -53,6 +54,14 @@
                 <groupId>com.srm</groupId>
                 <artifactId>srm-common</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <!-- O BOM do Spring Boot 4.1 não gerencia Resilience4j — import explícito (RNF01) -->
+            <dependency>
+                <groupId>io.github.resilience4j</groupId>
+                <artifactId>resilience4j-bom</artifactId>
+                <version>${resilience4j.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

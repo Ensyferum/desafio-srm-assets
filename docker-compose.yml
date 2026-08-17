@@ -233,7 +233,6 @@ services:
       <<: *common-env
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       CURRENCY_SERVICE_URI: http://currency-service:8080
-      FX_MAX_ATTEMPTS: ${FX_MAX_ATTEMPTS:-3}
       OTEL_SERVICE_NAME: credit-service
     ports:
       - "8083:8080"
@@ -279,6 +278,22 @@ services:
       gateway-service:
         condition: service_healthy
     restart: unless-stopped
+
+  # ==========================================================
+  # Load test (perfil opcional — RNF04): k6
+  #   docker compose run --rm k6                    # smoke (padrão)
+  #   docker compose run --rm k6 k6 run /scripts/load.js
+  # ==========================================================
+  k6:
+    image: grafana/k6:1.2.0
+    profiles: ["loadtest"]
+    container_name: srm-k6
+    volumes:
+      - ./load-test/k6:/scripts:ro
+    environment:
+      BASE_URL: http://gateway-service:8080
+    entrypoint: ["k6", "run", "/scripts/smoke.js"]
+    restart: "no"
 
 volumes:
   postgres-data:

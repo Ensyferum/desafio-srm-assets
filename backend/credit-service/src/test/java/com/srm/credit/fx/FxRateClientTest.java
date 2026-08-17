@@ -3,7 +3,6 @@ package com.srm.credit.fx;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
@@ -33,8 +32,7 @@ class FxRateClientTest {
                 new TestFxRateClient(
                         builder,
                         new CorrelationIdClientHttpRequestInterceptor(),
-                        "http://currency-service:8080",
-                        3);
+                        "http://currency-service:8080");
     }
 
     /** Mantém a request factory do MockRestServiceServer (sem timeout real). */
@@ -42,9 +40,8 @@ class FxRateClientTest {
         TestFxRateClient(
                 RestClient.Builder builder,
                 CorrelationIdClientHttpRequestInterceptor interceptor,
-                String baseUrl,
-                int maxAttempts) {
-            super(builder, interceptor, baseUrl, maxAttempts);
+                String baseUrl) {
+            super(builder, interceptor, baseUrl);
         }
 
         @Override
@@ -94,18 +91,36 @@ class FxRateClientTest {
     }
 
     @Test
-    void retriesTransientErrorsThenFailsWith503() {
-        for (int i = 0; i < 3; i++) {
-            server.expect(
-                            requestTo(
-                                    "http://currency-service:8080/api/v1/exchange-rates?from=USD&to=BRL&date=2026-08-12"))
-                    .andRespond(withServerError());
-        }
+    void throwsNotFoundWhenBothPairsMissing() {
+        server.expect(
+                        requestTo(
+                                "http://currency-service:8080/api/v1/exchange-rates?from=BRL&to=USD&date=2026-08-12"))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND));
+        server.expect(
+                        requestTo(
+                                "http://currency-service:8080/api/v1/exchange-rates?from=USD&to=BRL&date=2026-08-12"))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND));
 
-        assertThatThrownBy(() -> client.fetchRate("USD", "BRL", DATE))
+        assertThatThrownBy(() -> client.fetchRate("BRL", "USD", DATE))
                 .isInstanceOf(BusinessException.class)
                 .extracting(ex -> ((BusinessException) ex).getStatus())
-                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        server.verify();
+    }
+
+    @Test
+    void propagatesTransientErrorsToResilienceLayer() {
+        server.expect(
+                        requestTo(
+                                "http://currency-service:8080/api/v1/exchange-rates?from=USD&to=BRL&date=2026-08-12"))
+                .andRespond(
+                        org.springframework.test.web.client.response.MockRestResponseCreators
+                                .withServerError());
+
+        // Erro 5xx propaga (RestClientException) — o retry/circuit breaker vive no
+        // FxConversionService
+        assertThatThrownBy(() -> client.fetchRate("USD", "BRL", DATE))
+                .isInstanceOf(org.springframework.web.client.RestClientException.class);
         server.verify();
     }
 }
