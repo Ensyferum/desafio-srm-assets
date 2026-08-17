@@ -11,7 +11,7 @@
 #   docker compose --profile observability up -d --build
 #   Jaeger    http://localhost:16686
 #   Prometheus http://localhost:9090
-#   Grafana   http://localhost:3000 (admin / GRAFANA_ADMIN_PASSWORD)
+#   Grafana   http://localhost:3010 (admin / GRAFANA_ADMIN_PASSWORD)
 #
 # Portas:
 #   frontend         3000 (painel do operador)
@@ -135,7 +135,7 @@ services:
       - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
       - grafana-data:/var/lib/grafana
     ports:
-      - "3000:3000"
+      - "3010:3000"
     depends_on:
       prometheus:
         condition: service_started
