@@ -1,11 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Filter } from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Button, Field, Select, TextInput } from '../components/Field';
 import { Card } from '../components/Card';
 import { ErrorAlert } from '../components/ErrorAlert';
 import { Money } from '../components/Money';
 import { Spinner } from '../components/Spinner';
+import { Pagination } from '../components/Pagination';
 import { api } from '../lib/api';
 import { formatDateTime, formatNumber, todayISO } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
@@ -82,31 +83,15 @@ export function ExtratoPage() {
         subtitle={data ? `${data.totalElements} registro(s) · página ${data.page + 1} de ${Math.max(data.totalPages, 1)}` : ' '}
         padding={false}
         actions={
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!data || data.first}
-              onClick={() => setPage((p) => Math.max(0, p - 1))}
-              className="px-2.5"
-              aria-label="Página anterior"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-xs tabular-nums text-slate-400">
-              {data ? `${data.page + 1}/${Math.max(data.totalPages, 1)}` : '—'}
-            </span>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!data || data.last}
-              onClick={() => setPage((p) => p + 1)}
-              className="px-2.5"
-              aria-label="Próxima página"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          data && (
+            <Pagination
+              page={data.page}
+              totalPages={data.totalPages}
+              first={data.first}
+              last={data.last}
+              onChange={setPage}
+            />
+          )
         }
       >
         {result.loading ? (

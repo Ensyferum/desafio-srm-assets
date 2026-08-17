@@ -1,15 +1,28 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
-import { ArrowRightLeft, BadgeDollarSign, Landmark, RefreshCw, ReceiptText } from 'lucide-react';
+import {
+  ArrowRightLeft,
+  BadgeDollarSign,
+  BarChart3,
+  Landmark,
+  LineChart as LineChartIcon,
+  PieChart as PieChartIcon,
+  ReceiptText,
+  RefreshCw,
+} from 'lucide-react';
 import { Badge } from '../components/Badge';
 import { Card } from '../components/Card';
 import { ErrorAlert } from '../components/ErrorAlert';
@@ -23,8 +36,25 @@ import type { AnalyticsSummaryResponse, PageResponse, TransactionSummary } from 
 
 const chartColors = ['#10b981', '#38bdf8', '#a78bfa', '#f59e0b'];
 
+const chartKinds = [
+  { id: 'bar', label: 'Barras', Icon: BarChart3 },
+  { id: 'line', label: 'Linhas', Icon: LineChartIcon },
+  { id: 'donut', label: 'Donut', Icon: PieChartIcon },
+] as const;
+
+type ChartKind = (typeof chartKinds)[number]['id'];
+
+const tooltipStyle = {
+  background: '#0f172a',
+  border: '1px solid #334155',
+  borderRadius: 12,
+  color: '#e2e8f0',
+  fontSize: 12,
+};
+
 /** Dashboard com KPIs, volume por moeda e últimos lançamentos. */
 export function DashboardPage() {
+  const [chartKind, setChartKind] = useState<ChartKind>('bar');
   const summary = useAsync<AnalyticsSummaryResponse>(() => api.get('/analytics/summary'));
   const recent = useAsync<PageResponse<TransactionSummary>>(() =>
     api.get('/transactions?page=0&size=6&sort=settledAt,desc'),
@@ -101,37 +131,115 @@ export function DashboardPage() {
           title="Valor presente por moeda"
           subtitle="Distribuição das liquidações no período"
           className="xl:col-span-2"
+          actions={
+            <div
+              className="inline-flex rounded-lg border border-slate-800 bg-slate-800/40 p-0.5"
+              role="group"
+              aria-label="Tipo de gráfico"
+            >
+              {chartKinds.map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setChartKind(id)}
+                  title={label}
+                  aria-label={`Gráfico de ${label}`}
+                  aria-pressed={chartKind === id}
+                  className={`rounded-md p-1.5 transition-colors ${
+                    chartKind === id ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-200'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                </button>
+              ))}
+            </div>
+          }
         >
           {summary.loading ? (
             <Spinner label="Carregando…" />
           ) : chartData.length === 0 ? (
             <p className="py-10 text-center text-sm text-slate-500">Sem liquidações no período.</p>
           ) : (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                  <XAxis dataKey="currency" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => formatMoneyCompact(v)} />
-                  <Tooltip
-                    cursor={{ fill: 'rgba(148,163,184,0.08)' }}
-                    contentStyle={{
-                      background: '#0f172a',
-                      border: '1px solid #334155',
-                      borderRadius: 12,
-                      color: '#e2e8f0',
-                      fontSize: 12,
-                    }}
-                    formatter={(value) => [formatMoney(Number(value ?? 0)), 'Valor presente']}
-                  />
-                  <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                    {chartData.map((_, index) => (
-                      <Cell key={index} fill={chartColors[index % chartColors.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <>
+              <div className="relative h-64">
+                <ResponsiveContainer key={chartKind} width="100%" height="100%">
+                  {chartKind === 'bar' && (
+                    <BarChart data={chartData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <XAxis dataKey="currency" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => formatMoneyCompact(v)} />
+                      <Tooltip
+                        cursor={{ fill: 'rgba(148,163,184,0.08)' }}
+                        contentStyle={tooltipStyle}
+                        formatter={(value) => [formatMoney(Number(value ?? 0)), 'Valor presente']}
+                      />
+                      <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                        {chartData.map((_, index) => (
+                          <Cell key={index} fill={chartColors[index % chartColors.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  )}
+                  {chartKind === 'line' && (
+                    <LineChart data={chartData} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <XAxis dataKey="currency" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => formatMoneyCompact(v)} />
+                      <Tooltip
+                        contentStyle={tooltipStyle}
+                        formatter={(value) => [formatMoney(Number(value ?? 0)), 'Valor presente']}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="value"
+                        stroke="#10b981"
+                        strokeWidth={2.5}
+                        dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  )}
+                  {chartKind === 'donut' && (
+                    <PieChart>
+                      <Tooltip
+                        contentStyle={tooltipStyle}
+                        formatter={(value) => [formatMoney(Number(value ?? 0)), 'Valor presente']}
+                      />
+                      <Pie
+                        data={chartData}
+                        dataKey="value"
+                        nameKey="currency"
+                        innerRadius={62}
+                        outerRadius={92}
+                        paddingAngle={3}
+                        stroke="#0f172a"
+                        strokeWidth={2}
+                      >
+                        {chartData.map((_, index) => (
+                          <Cell key={index} fill={chartColors[index % chartColors.length]} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  )}
+                </ResponsiveContainer>
+                {chartKind === 'donut' && (
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-[10px] uppercase tracking-wider text-slate-500">Total</span>
+                    <span className="text-lg font-bold text-slate-100">
+                      {formatMoneyCompact(chartData.reduce((sum, d) => sum + d.value, 0))}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs text-slate-400">
+                {chartData.map((d, index) => (
+                  <span key={d.currency} className="inline-flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full" style={{ background: chartColors[index % chartColors.length] }} />
+                    {d.currency}: {formatMoneyCompact(d.value, d.currency)}
+                  </span>
+                ))}
+              </div>
+            </>
           )}
         </Card>
 
