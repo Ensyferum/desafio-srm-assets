@@ -152,7 +152,7 @@ docker compose up -d --build
 docker compose ps
 
 # 4. Acesse o painel do operador
-open http://localhost:3001
+open http://localhost:3000
 
 # 5. Smoke test E2E (login → taxa → simulação → lote → liquidação → extrato)
 ./scripts/e2e-smoke.sh
@@ -166,7 +166,7 @@ docker compose down
 
 | Serviço | Porta | Healthcheck |
 |---|---|---|
-| **frontend** | **3001** (painel do operador — React/nginx) | wget na página |
+| **frontend** | **3000** (painel do operador — React/nginx) | wget na página |
 | gateway-service | **8080** (entrada da API) | actuator |
 | auth-service | 8081 | actuator |
 | currency-service | 8082 | actuator |
@@ -208,7 +208,7 @@ docker compose --profile observability up -d --build
 |---|---|---|
 | Jaeger | http://localhost:16686 | traces distribuídos (OTLP via OpenTelemetry agent) |
 | Prometheus | http://localhost:9090 | métricas (`/actuator/prometheus`) |
-| Grafana | http://localhost:3000 | dashboards (admin / senha em `GRAFANA_ADMIN_PASSWORD`) |
+| Grafana | http://localhost:3010 | dashboards (admin / senha em `GRAFANA_ADMIN_PASSWORD`) |
 
 Para habilitar o agente OpenTelemetry: `OTEL_JAVAAGENT_ENABLED=true` no `.env`.
 

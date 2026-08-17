@@ -15,7 +15,7 @@
 | Infra | "Kafka cp-kafka 7.9 em KRaft não sobe no compose" | `CLUSTER_ID` literal + listeners com hostname do serviço (não `0.0.0.0`) + healthcheck `cub kafka-ready` no listener interno |
 | E2E | "Escreva um smoke test que percorra o fluxo de negócio completo pelo gateway" | `scripts/e2e-smoke.sh` — 10/10 checks verdes |
 | Qualidade | "Rode mvn verify e corrija o que falhar" | Testes + cobertura JaCoCo ≥ 80% em todos os módulos |
-| Frontend | "Implemente o painel do operador (React) conforme a spec" | React 19 + Vite 6 + TS + Tailwind 4: login, dashboard, simulação em tempo real, recebíveis/liquidação, taxas FX, extrato — validado no compose (:3001) |
+| Frontend | "Implemente o painel do operador (React) conforme a spec" | React 19 + Vite 6 + TS + Tailwind 4: login, dashboard, simulação em tempo real, recebíveis/liquidação, taxas FX, extrato — validado no compose (:3000) |
 | Frontend avançado | "Crie a lista de recebíveis, o gráfico temporável e faça todos os dados do frontend serem reais" | `GET /api/v1/receivables` (filtros status/moeda/cedente + paginação server-side), painel em abas (lista/lote/liquidação), gráfico do dashboard com toggle barras/linhas/donut; auditoria confirmou 0 dados mock (todas as telas consomem APIs reais) |
 
 ## 2. Onde a IA alucinou / gerou código inseguro — e como foi corrigido
@@ -33,7 +33,7 @@
 | 9 | Nome de campo errado no E2E (`presentValueInSettlement`) | Campo ausente no JSON real | Campo real é `presentValueInSettlementCurrency` — confirmado no DTO e corrigido no script |
 | 10 | Frontend: `exchangeRateApplied` tipado como `number` | Typecheck não acusava, mas o backend devolve `null` para moedas iguais (BRL→BRL) | Tipos corrigidos para `number \| null` + guards nos componentes (descoberto na revisão de código, não em runtime) |
 | 11 | Validação de status inválido feita dentro da lambda da `Specification` | Teste unitário falhou com NPE — o mock de `findAll` não executa a lambda, então o `BusinessException` nunca era lançado | Validação movida para antes da construção da Specification (fail-fast no `ReceivableService.list`) e teste reescrito para capturar a especificação e avaliá-la |
-| 12 | README anunciava o frontend na porta :3000 | Smoke test não conectava na porta informada | O compose expõe o frontend em **:3001** (a :3000 é do Grafana); README corrigido e smoke refeito na porta certa |
+| 12 | Portas de exposição mudaram durante o desenvolvimento (frontend vs Grafana disputando :3000) | Smoke test e README ficaram dessincronizados da porta real em dois momentos | Estado final consolidado e validado: **frontend em :3000** e **Grafana em :3010** no compose; README e AI_USAGE atualizados para as portas reais |
 
 > Regra aplicada em todos os casos: **nenhuma correção foi aceita por "confiança" — cada uma foi reproduzida e validada** (jar inspecionado, container one-off, bytecode, respostas reais da API).
 
