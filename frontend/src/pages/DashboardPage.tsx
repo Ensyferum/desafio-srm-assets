@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -15,6 +17,7 @@ import {
 } from 'recharts';
 import {
   ArrowRightLeft,
+  AreaChart as AreaChartIcon,
   BadgeDollarSign,
   BarChart3,
   Landmark,
@@ -30,9 +33,15 @@ import { Money } from '../components/Money';
 import { Spinner } from '../components/Spinner';
 import { StatCard } from '../components/StatCard';
 import { api } from '../lib/api';
-import { formatDate, formatMoney, formatMoneyCompact } from '../lib/format';
+import { formatDate, formatDocument, formatMoney, formatMoneyCompact } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
-import type { AnalyticsSummaryResponse, PageResponse, TransactionSummary } from '../lib/types';
+import type {
+  AnalyticsSummaryResponse,
+  CedenteDistribution,
+  PageResponse,
+  TimeSeriesPoint,
+  TransactionSummary,
+} from '../lib/types';
 
 /** Auto-refresh: atualiza o painel a cada N segundos (observação operacional). */
 const AUTO_REFRESH_MS = 30_000;
@@ -47,6 +56,13 @@ const chartKinds = [
 
 type ChartKind = (typeof chartKinds)[number]['id'];
 
+const timeKinds = [
+  { id: 'area', label: 'Área', Icon: AreaChartIcon },
+  { id: 'line', label: 'Linhas', Icon: LineChartIcon },
+] as const;
+
+type TimeKind = (typeof timeKinds)[number]['id'];
+
 const tooltipStyle = {
   background: '#0f172a',
   border: '1px solid #334155',
@@ -55,10 +71,19 @@ const tooltipStyle = {
   fontSize: 12,
 };
 
-/** Dashboard com KPIs, volume por moeda e últimos lançamentos. */
+/** Linha da série temporal: data + uma coluna numérica por moeda (para recharts). */
+interface SeriesRow {
+  date: string;
+  [currency: string]: string | number;
+}
+
+/** Dashboard com KPIs, séries temporais, concentração por cedente e últimos lançamentos. */
 export function DashboardPage() {
   const [chartKind, setChartKind] = useState<ChartKind>('bar');
+  const [timeKind, setTimeKind] = useState<TimeKind>('area');
   const summary = useAsync<AnalyticsSummaryResponse>(() => api.get('/analytics/summary'));
+  const timeSeries = useAsync<TimeSeriesPoint[]>(() => api.get('/analytics/timeseries'));
+  const byCedente = useAsync<CedenteDistribution[]>(() => api.get('/analytics/by-cedente'));
   const recent = useAsync<PageResponse<TransactionSummary>>(() =>
     api.get('/transactions?page=0&size=6&sort=settledAt,desc'),
   );
@@ -69,11 +94,36 @@ export function DashboardPage() {
     return entries.map(([currency, value]) => ({ currency, value }));
   }, [summary.data]);
 
+  /** Série temporal: agrega por data, uma coluna por moeda (para linhas/áreas). */
+  const seriesByDate = useMemo(() => {
+    const points = timeSeries.data ?? [];
+    if (points.length === 0) return [];
+    const rows = new Map<string, SeriesRow>();
+    for (const point of points) {
+      const row = rows.get(point.date) ?? { date: point.date };
+      const prev = row[point.currency];
+      row[point.currency] = (typeof prev === 'number' ? prev : 0) + point.presentValue;
+      rows.set(point.date, row);
+    }
+    return [...rows.values()].sort((a, b) => a.date.localeCompare(b.date));
+  }, [timeSeries.data]);
+
+  const seriesCurrencies = useMemo(
+    () => [...new Set((timeSeries.data ?? []).map((p) => p.currency))],
+    [timeSeries.data],
+  );
+
+  /** Top cedentes: ordena por valor presente e limita a 8 para leitura. */
+  const cedenteData = useMemo(() => (byCedente.data ?? []).slice(0, 8), [byCedente.data]);
+  const maxCedenteValue = cedenteData[0]?.presentValue ?? 1;
+
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   function reloadAll() {
     void summary.reload();
+    void timeSeries.reload();
+    void byCedente.reload();
     void recent.reload();
     setLastUpdated(new Date());
   }
@@ -159,6 +209,206 @@ export function DashboardPage() {
             .join(' · ') || 'sem dados'}
           accent="violet"
         />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
+        <Card
+          title="Evolução diária do valor presente"
+          subtitle="Série temporal por moeda no período"
+          className="xl:col-span-3"
+          actions={
+            <div
+              className="inline-flex rounded-lg border border-slate-800 bg-slate-800/40 p-0.5"
+              role="group"
+              aria-label="Tipo de gráfico temporal"
+            >
+              {timeKinds.map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTimeKind(id)}
+                  title={label}
+                  aria-label={`Série temporal de ${label}`}
+                  aria-pressed={timeKind === id}
+                  className={`rounded-md p-1.5 transition-colors ${
+                    timeKind === id ? 'bg-brand-600 text-white' : 'text-slate-500 hover:text-slate-200'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                </button>
+              ))}
+            </div>
+          }
+        >
+          {timeSeries.loading ? (
+            <Spinner label="Carregando…" />
+          ) : seriesByDate.length === 0 ? (
+            <p className="py-10 text-center text-sm text-slate-500">Sem liquidações no período.</p>
+          ) : (
+            <>
+              <div className="relative h-64">
+                <ResponsiveContainer key={timeKind} width="100%" height="100%">
+                  {timeKind === 'area' ? (
+                    <AreaChart data={seriesByDate} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+                      <defs>
+                        {seriesCurrencies.map((currency, index) => (
+                          <linearGradient key={currency} id={`grad-${currency}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={chartColors[index % chartColors.length]} stopOpacity={0.35} />
+                            <stop offset="100%" stopColor={chartColors[index % chartColors.length]} stopOpacity={0} />
+                          </linearGradient>
+                        ))}
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#64748b"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => formatDate(String(value))}
+                        minTickGap={28}
+                      />
+                      <YAxis
+                        stroke="#64748b"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => formatMoneyCompact(Number(value))}
+                      />
+                      <Tooltip
+                        cursor={{ stroke: '#475569', strokeDasharray: '4 4' }}
+                        contentStyle={tooltipStyle}
+                        labelFormatter={(label) => formatDate(String(label))}
+                        formatter={(value, name) => [formatMoney(Number(value ?? 0)), String(name)]}
+                      />
+                      {seriesCurrencies.map((currency, index) => (
+                        <Area
+                          key={currency}
+                          type="monotone"
+                          dataKey={currency}
+                          name={currency}
+                          stroke={chartColors[index % chartColors.length]}
+                          strokeWidth={2.5}
+                          fill={`url(#grad-${currency})`}
+                          dot={false}
+                          activeDot={{ r: 4 }}
+                        />
+                      ))}
+                    </AreaChart>
+                  ) : (
+                    <LineChart data={seriesByDate} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#64748b"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => formatDate(String(value))}
+                        minTickGap={28}
+                      />
+                      <YAxis
+                        stroke="#64748b"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => formatMoneyCompact(Number(value))}
+                      />
+                      <Tooltip
+                        contentStyle={tooltipStyle}
+                        labelFormatter={(label) => formatDate(String(label))}
+                        formatter={(value, name) => [formatMoney(Number(value ?? 0)), String(name)]}
+                      />
+                      {seriesCurrencies.map((currency, index) => (
+                        <Line
+                          key={currency}
+                          type="monotone"
+                          dataKey={currency}
+                          name={currency}
+                          stroke={chartColors[index % chartColors.length]}
+                          strokeWidth={2.5}
+                          dot={{ r: 3, fill: chartColors[index % chartColors.length], strokeWidth: 0 }}
+                          activeDot={{ r: 5 }}
+                        />
+                      ))}
+                    </LineChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs text-slate-400">
+                {seriesCurrencies.map((currency, index) => (
+                  <span key={currency} className="inline-flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full" style={{ background: chartColors[index % chartColors.length] }} />
+                    {currency}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+        </Card>
+
+        <Card
+          title="Top cedentes"
+          subtitle="Concentração do volume liquidado por CNPJ"
+          className="xl:col-span-2"
+          padding={false}
+        >
+          {byCedente.loading ? (
+            <div className="p-5">
+              <Spinner label="Carregando…" />
+            </div>
+          ) : byCedente.error ? (
+            <div className="p-5">
+              <ErrorAlert message={byCedente.error} />
+            </div>
+          ) : cedenteData.length === 0 ? (
+            <p className="py-10 text-center text-sm text-slate-500">Sem liquidações no período.</p>
+          ) : (
+            <>
+              <div className="divide-y divide-slate-800/60">
+                {cedenteData.map((cedente, index) => {
+                  const width = Math.max(4, (cedente.presentValue / maxCedenteValue) * 100);
+                  return (
+                    <div key={cedente.cedenteDocument} className="flex items-center gap-3 px-5 py-3">
+                      <span className="w-5 shrink-0 text-right text-xs font-semibold tabular-nums text-slate-500">
+                        {index + 1}º
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span
+                            className="truncate font-mono text-sm text-slate-200"
+                            title={formatDocument(cedente.cedenteDocument)}
+                          >
+                            {formatDocument(cedente.cedenteDocument)}
+                          </span>
+                          <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-100">
+                            {formatMoneyCompact(cedente.presentValue)}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{ width: `${width}%`, background: chartColors[index % chartColors.length] }}
+                            />
+                          </div>
+                          <span className="shrink-0 text-[11px] tabular-nums text-slate-500">
+                            {cedente.transactions} {cedente.transactions === 1 ? 'tx' : 'txs'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {(byCedente.data?.length ?? 0) > cedenteData.length && (
+                <p className="border-t border-slate-800 px-5 py-3 text-center text-xs text-slate-500">
+                  +{(byCedente.data?.length ?? 0) - cedenteData.length} cedentes — veja o extrato para a lista completa
+                </p>
+              )}
+            </>
+          )}
+        </Card>
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">

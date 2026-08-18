@@ -1,7 +1,9 @@
 package com.srm.analytics.repo;
 
 import com.srm.analytics.dto.AnalyticsSummaryResponse;
+import com.srm.analytics.dto.CedenteDistribution;
 import com.srm.analytics.dto.PageResponse;
+import com.srm.analytics.dto.TimeSeriesPoint;
 import com.srm.analytics.dto.TransactionSummary;
 import com.srm.analytics.repo.SettlementQueryBuilder.SqlQuery;
 import java.math.BigDecimal;
@@ -95,6 +97,57 @@ public class SettlementAnalyticsRepository {
                 startDate,
                 endDate);
     }
+
+    /** Série temporal diária: valor presente por moeda (ordena por data e moeda). */
+    public List<TimeSeriesPoint> timeSeries(LocalDate startDate, LocalDate endDate) {
+        return jdbcTemplate.query(
+                """
+                SELECT summary_date, currency, total_transactions, total_present_value
+                FROM analytics.settlement_daily_summary
+                WHERE summary_date >= ? AND summary_date <= ?
+                ORDER BY summary_date, currency
+                """,
+                TIME_SERIES_ROW_MAPPER,
+                startDate,
+                endDate);
+    }
+
+    /**
+     * Distribuição do valor presente por cedente (CNPJ), do maior para o menor. O limite superior é
+     * exclusivo (settled_at &lt; fim+1dia) para capturar o dia inteiro; o comparativo com DATE usa
+     * meia-noite no fuso do servidor, mesmo critério do extrato.
+     */
+    public List<CedenteDistribution> distributionByCedente(LocalDate startDate, LocalDate endDate) {
+        return jdbcTemplate.query(
+                """
+                SELECT cedente_document,
+                       COUNT(*) AS total_transactions,
+                       COALESCE(SUM(present_value), 0) AS present_value
+                FROM analytics.settlement_projection
+                WHERE settled_at >= ? AND settled_at < ?
+                  AND cedente_document <> '00000000000000'
+                GROUP BY cedente_document
+                ORDER BY present_value DESC
+                """,
+                CEDENTE_ROW_MAPPER,
+                startDate,
+                endDate.plusDays(1));
+    }
+
+    static final RowMapper<TimeSeriesPoint> TIME_SERIES_ROW_MAPPER =
+            (ResultSet rs, int rowNum) ->
+                    new TimeSeriesPoint(
+                            rs.getObject("summary_date", LocalDate.class),
+                            rs.getString("currency"),
+                            rs.getLong("total_transactions"),
+                            rs.getBigDecimal("total_present_value"));
+
+    static final RowMapper<CedenteDistribution> CEDENTE_ROW_MAPPER =
+            (ResultSet rs, int rowNum) ->
+                    new CedenteDistribution(
+                            rs.getString("cedente_document"),
+                            rs.getLong("total_transactions"),
+                            rs.getBigDecimal("present_value"));
 
     static final RowMapper<TransactionSummary> TRANSACTION_ROW_MAPPER =
             (ResultSet rs, int rowNum) ->

@@ -158,6 +158,21 @@ export interface AnalyticsSummaryResponse {
   endDate: string;
 }
 
+export interface TimeSeriesPoint {
+  /** yyyy-MM-dd */
+  date: string;
+  currency: string;
+  transactions: number;
+  presentValue: number;
+}
+
+export interface CedenteDistribution {
+  /** CNPJ do cedente (14 dígitos). */
+  cedenteDocument: string;
+  transactions: number;
+  presentValue: number;
+}
+
 export interface ErrorResponseBody {
   timestamp: string;
   status: number;

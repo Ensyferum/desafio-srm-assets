@@ -234,6 +234,8 @@ Todas as rotas passam pelo **gateway (`:8080`)** e exigem `Authorization: Bearer
 | GET | `/api/v1/receivables` | credit | Lista de recebíveis (filtros `status`/`currency`/`cedenteDocument` + paginação) |
 | GET | `/api/v1/transactions` | analytics | **Extrato** de liquidações (CQRS) — RF05 (filtros `startDate`/`endDate`/`cedenteDocument`/`currency`) |
 | GET | `/api/v1/analytics/summary` | analytics | Resumo diário (dashboard) |
+| GET | `/api/v1/analytics/timeseries` | analytics | Série temporal diária de valor presente por moeda (dashboard) |
+| GET | `/api/v1/analytics/by-cedente` | analytics | Distribuição das liquidações por cedente/CNPJ (dashboard) |
 
 **Documentação OpenAPI (Swagger) agregada pelo gateway (RF04):**
 
@@ -440,7 +442,7 @@ Evolução incremental a partir desta base (detalhes nos ADRs e na spec):
 - [x] **Swagger agregado (RF04)** — UI e spec de todos os serviços via gateway (`/swagger/{serviço}/swagger-ui.html`)
 - [x] **Kubernetes (Seção 9.2)** — manifests completos em `k8s/` (namespace, config, secrets, infra, deployments com probes, services, ingress)
 - [x] **UX operacional** — toasts de feedback, filtro por CNPJ no extrato/lista, exportação CSV, auto-refresh no dashboard, abas com deep-link
-- [ ] Séries temporais e distribuição por cedente nos gráficos
+- [x] **Séries temporais e distribuição por cedente nos gráficos** — evolução diária multi-moeda (área/linhas) e top cedentes com barras de concentração no dashboard
 
 ---
 

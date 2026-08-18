@@ -6,10 +6,13 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.srm.analytics.dto.AnalyticsSummaryResponse;
+import com.srm.analytics.dto.CedenteDistribution;
 import com.srm.analytics.dto.PageResponse;
+import com.srm.analytics.dto.TimeSeriesPoint;
 import com.srm.analytics.dto.TransactionSummary;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
@@ -103,6 +106,78 @@ class SettlementAnalyticsRepositoryTest {
         assertThat(summary.totalPresentValue()).isEqualByComparingTo("100.00");
         assertThat(summary.totalDiscountValue()).isEqualByComparingTo("10.00");
         assertThat(summary.presentValueByCurrency()).containsEntry("BRL", new BigDecimal("100.00"));
+    }
+
+    @Test
+    void timeSeriesRowMapperMapsAllColumns() throws Exception {
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.getObject("summary_date", LocalDate.class)).thenReturn(LocalDate.of(2026, 8, 12));
+        when(rs.getString("currency")).thenReturn("BRL");
+        when(rs.getLong("total_transactions")).thenReturn(2L);
+        when(rs.getBigDecimal("total_present_value")).thenReturn(new BigDecimal("100.00"));
+
+        TimeSeriesPoint point = SettlementAnalyticsRepository.TIME_SERIES_ROW_MAPPER.mapRow(rs, 0);
+
+        assertThat(point.date()).isEqualTo(LocalDate.of(2026, 8, 12));
+        assertThat(point.currency()).isEqualTo("BRL");
+        assertThat(point.transactions()).isEqualTo(2);
+        assertThat(point.presentValue()).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    void cedenteRowMapperMapsAllColumns() throws Exception {
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.getString("cedente_document")).thenReturn("11222333000181");
+        when(rs.getLong("total_transactions")).thenReturn(3L);
+        when(rs.getBigDecimal("present_value")).thenReturn(new BigDecimal("150000.00"));
+
+        CedenteDistribution distribution =
+                SettlementAnalyticsRepository.CEDENTE_ROW_MAPPER.mapRow(rs, 0);
+
+        assertThat(distribution.cedenteDocument()).isEqualTo("11222333000181");
+        assertThat(distribution.transactions()).isEqualTo(3);
+        assertThat(distribution.presentValue()).isEqualByComparingTo("150000.00");
+    }
+
+    @Test
+    void timeSeriesQueriesDailySummaryRows() {
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        SettlementAnalyticsRepository repository = new SettlementAnalyticsRepository(jdbcTemplate);
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(
+                        List.of(
+                                new TimeSeriesPoint(
+                                        LocalDate.of(2026, 8, 12),
+                                        "BRL",
+                                        2,
+                                        new BigDecimal("100.00"))));
+
+        List<TimeSeriesPoint> series =
+                repository.timeSeries(LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 31));
+
+        assertThat(series).hasSize(1);
+        assertThat(series.get(0).presentValue()).isEqualByComparingTo("100.00");
+    }
+
+    @Test
+    void distributionByCedenteAggregatesProjectionRows() {
+        LocalDate start = LocalDate.of(2026, 8, 1);
+        LocalDate end = LocalDate.of(2026, 8, 31);
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        SettlementAnalyticsRepository repository = new SettlementAnalyticsRepository(jdbcTemplate);
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), any(Object[].class)))
+                .thenReturn(
+                        List.of(
+                                new CedenteDistribution(
+                                        "11222333000181", 3, new BigDecimal("150000.00"))));
+
+        List<CedenteDistribution> distribution = repository.distributionByCedente(start, end);
+
+        assertThat(distribution).hasSize(1);
+        assertThat(distribution.get(0).cedenteDocument()).isEqualTo("11222333000181");
+        // O limite superior deve ser exclusivo (fim + 1 dia) para incluir o dia inteiro
+        verify(jdbcTemplate)
+                .query(anyString(), any(RowMapper.class), eq(start), eq(end.plusDays(1)));
     }
 
     @Test
